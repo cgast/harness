@@ -1,7 +1,8 @@
 /**
- * REST API definitions for server mode.
- * Placeholder for Phase 4.
+ * API definitions for server mode (REST + WebSocket).
  */
+
+// ── REST API types ────────────────────────────────────────────────
 
 export interface RunTaskRequest {
   task: string;
@@ -22,4 +23,26 @@ export interface RunTaskResponse {
 export interface HealthResponse {
   status: "ok" | "error";
   version: string;
+  /** Number of active WebSocket connections. */
+  connections: number;
 }
+
+// ── Re-export WebSocket protocol types ────────────────────────────
+
+export type {
+  ClientMessage,
+  ServerMessage,
+  RunMessage,
+  CancelMessage,
+  FeedbackMessage,
+  PingMessage,
+  SessionInitMessage,
+  TaskStartMessage,
+  TaskCompleteMessage,
+  TaskErrorMessage,
+  EventMessage,
+  TextDeltaMessage,
+  FeedbackRequestMessage,
+  PongMessage,
+  ErrorMessage,
+} from "./protocol.js";
