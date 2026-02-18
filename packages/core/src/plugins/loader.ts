@@ -47,11 +47,8 @@ export class PluginLoader {
     let plugin: HarnessPlugin;
 
     if (typeof pluginOrPath === "string") {
-      // Load from path
-      const resolved = path.resolve(pluginOrPath);
-      if (!fs.existsSync(resolved)) {
-        throw new Error(`Plugin not found: ${resolved}`);
-      }
+      // Load from path or plugin name
+      const resolved = this.resolvePluginPath(pluginOrPath);
       const mod = await import(resolved);
       plugin = mod.default || mod;
     } else {
@@ -77,6 +74,74 @@ export class PluginLoader {
 
     this.loaded.set(plugin.id, plugin);
     return plugin;
+  }
+
+  /**
+   * Resolve a plugin string to a loadable path.
+   *
+   * Resolution order:
+   * 1. Absolute or relative paths (starting with / ./ ../) — resolve against cwd
+   * 2. Try require.resolve for npm packages
+   * 3. Scan plugins/ directory for a matching package
+   */
+  private resolvePluginPath(pluginOrPath: string): string {
+    // 1. Explicit file paths — resolve against cwd
+    if (pluginOrPath.startsWith("/") || pluginOrPath.startsWith("./") || pluginOrPath.startsWith("../")) {
+      const resolved = path.resolve(pluginOrPath);
+      if (fs.existsSync(resolved)) {
+        return resolved;
+      }
+      throw new Error(`Plugin not found: ${resolved}`);
+    }
+
+    // 2. Try Node module resolution (handles npm packages and workspace links)
+    try {
+      return require.resolve(pluginOrPath, { paths: [process.cwd()] });
+    } catch {
+      // Not an installed package, continue
+    }
+
+    // 3. Scan plugins/ directory relative to cwd
+    const pluginsDir = path.resolve(process.cwd(), "plugins");
+    if (fs.existsSync(pluginsDir) && fs.statSync(pluginsDir).isDirectory()) {
+      const candidates: string[] = [];
+      try {
+        candidates.push(...fs.readdirSync(pluginsDir));
+      } catch {
+        // Can't read plugins dir, skip
+      }
+
+      for (const dir of candidates) {
+        const pluginDir = path.join(pluginsDir, dir);
+        if (!fs.statSync(pluginDir).isDirectory()) continue;
+
+        const pkgPath = path.join(pluginDir, "package.json");
+        if (!fs.existsSync(pkgPath)) continue;
+
+        try {
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+          const mainEntry = pkg.main || "index.js";
+          const entryPoint = path.resolve(pluginDir, mainEntry);
+
+          // Match by directory name, by "harness-<dir>" convention, or by package name
+          if (
+            dir === pluginOrPath ||
+            `harness-${dir}` === pluginOrPath ||
+            pkg.name === pluginOrPath
+          ) {
+            if (fs.existsSync(entryPoint)) {
+              return entryPoint;
+            }
+          }
+        } catch {
+          // Malformed package.json, skip
+        }
+      }
+    }
+
+    throw new Error(
+      `Plugin not found: "${pluginOrPath}". Searched as file path, npm package, and in plugins/ directory.`
+    );
   }
 
   /**
