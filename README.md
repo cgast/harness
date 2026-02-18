@@ -1,0 +1,505 @@
+# Harness
+
+**Universal LLM Agent Runtime**
+
+Harness wraps any LLM API into a fully observable, plugin-extensible agent loop with persistent state, skill/tool management, and a soul layer for personality and values.
+
+**Core principles:**
+
+- **Any LLM** -- OpenAI, Anthropic, Google, Ollama, LM Studio, any OpenAI-compatible endpoint
+- **Any plugin** -- Event-based hook system; anyone can extend behavior without touching core
+- **Any machine** -- Runs as a desktop app (Electron), CLI tool, or Docker container
+- **Radically simple** -- The core loop is ~350 lines. Everything else is plugins
+- **Fully observable** -- Every token, tool call, and state change is an event that can be monitored live
+
+Successor to [cgast/tiny-agent](https://github.com/cgast/tiny-agent). Keeps the minimal philosophy, adds the harness around it.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        HARNESS                                  │
+│                                                                 │
+│  ┌──────────┐   ┌──────────────────────────────────────────┐   │
+│  │          │   │            AGENT LOOP                     │   │
+│  │   SOUL   │──>│                                          │   │
+│  │  (yaml)  │   │  prompt ──> LLM ──> parse ──> execute    │   │
+│  │          │   │     ^                           |         │   │
+│  └──────────┘   │     |         ┌─────────┐       |         │   │
+│                 │     └─────────│  STATE   │<──────┘         │   │
+│  ┌──────────┐   │               └─────────┘                 │   │
+│  │  SKILLS  │──>│                    |                       │   │
+│  │  (yaml)  │   │                    v                       │   │
+│  └──────────┘   │              ┌──────────┐                  │   │
+│                 │              │ PERSIST  │                  │   │
+│  ┌──────────┐   │              └──────────┘                  │   │
+│  │  TOOLS   │──>│                                          │   │
+│  │(plugins) │   └──────────────────────────────────────────┘   │
+│  └──────────┘                                                   │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    EVENT BUS                              │   │
+│  │  on:loop_start  on:llm_request  on:tool_call  on:error   │   │
+│  │  on:state_change  on:task_end  on:user_input  ...        │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                          |                                      │
+│              ┌───────────┼───────────┐                          │
+│              v           v           v                          │
+│         ┌────────┐ ┌─────────┐ ┌─────────┐                    │
+│         │ Plugin │ │ Plugin  │ │ Plugin  │  ...                │
+│         │Telemetry│ │  UI    │ │ Logger  │                    │
+│         └────────┘ └─────────┘ └─────────┘                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+The agent loop is the heart: **assemble prompt -> call LLM -> parse response -> execute tools -> update state -> repeat**. Every step emits events that plugins can observe or modify.
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js >= 20
+- pnpm
+
+### Install and build
+
+```bash
+git clone https://github.com/cgast/harness.git
+cd harness
+pnpm install
+pnpm build
+```
+
+### Configure
+
+Create a config file at `~/.harness/config.yaml`:
+
+```yaml
+providers:
+  anthropic:
+    apiKey: "${ANTHROPIC_API_KEY}"
+    defaultModel: "claude-sonnet-4-5-20250929"
+  openai:
+    apiKey: "${OPENAI_API_KEY}"
+    defaultModel: "gpt-4o"
+  ollama:
+    baseUrl: "http://localhost:11434"
+    defaultModel: "llama3.2"
+
+defaults:
+  provider: "anthropic"
+  soul: "default"
+  temperature: 0.7
+  maxIterations: 25
+  maxTokens: 4096
+
+plugins:
+  enabled:
+    - "harness-telemetry"
+```
+
+Or just set an environment variable:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Run
+
+```bash
+npx harness "What files are in the current directory?"
+```
+
+With options:
+
+```bash
+npx harness --provider openai --model gpt-4o --verbose "Summarize README.md"
+npx harness --provider ollama --model llama3.2 "Hello world"
+```
+
+### Server mode
+
+```bash
+cd packages/server
+pnpm start
+# POST http://localhost:3000/api/run  {"task": "List files in /tmp"}
+```
+
+---
+
+## Project Structure
+
+```
+harness/
+├── packages/
+│   ├── core/           # Engine: agent loop, providers, tools, events, state, persistence
+│   ├── cli/            # CLI entry point: `npx harness "task"`
+│   └── server/         # HTTP server mode (REST API)
+├── plugins/
+│   └── telemetry/      # Built-in telemetry plugin
+├── skills/             # Skill definitions (YAML)
+│   ├── shell.yaml      # Shell command execution
+│   ├── file-ops.yaml   # File read/write/list
+│   └── http.yaml       # HTTP requests
+├── souls/              # Soul documents (YAML)
+│   └── default.yaml    # Default assistant personality
+├── pnpm-workspace.yaml
+└── tsconfig.base.json
+```
+
+### Core package (`packages/core`)
+
+| Directory | Purpose |
+|-----------|---------|
+| `engine/` | The agent loop, state machine, and prompt assembler |
+| `providers/` | LLM provider adapters (Anthropic, OpenAI, Ollama) |
+| `tools/` | Tool registry, executor, and built-in tools (shell, file-ops, HTTP) |
+| `soul/` | Soul YAML loader and system prompt injector |
+| `skills/` | Skill YAML loader and activation resolver |
+| `persistence/` | Session/memory storage (SQLite and in-memory) |
+| `events/` | Typed event bus with priority and modification support |
+| `plugins/` | Plugin loader and interface definitions |
+
+---
+
+## Concepts
+
+### Soul
+
+A soul document defines the agent's personality and values as layered YAML. Layers are assembled into the system prompt in order of precedence:
+
+```yaml
+# souls/default.yaml
+id: default
+name: "Harness Assistant"
+version: 1
+
+layers:
+  boundaries:         # Hard limits -- never overridden
+    - "Never provide instructions for weapons or harmful substances"
+    - "Always disclose that you are an AI when directly asked"
+
+  ethics:             # Core values
+    - "Be honest and acknowledge uncertainty"
+    - "Respect user privacy"
+
+  character:          # Personality
+    traits:
+      - "Helpful and thorough"
+      - "Direct and concise"
+    style:
+      verbosity: "concise"
+      tone: "professional but friendly"
+      language: "match user's language"
+
+  context:            # Situational instructions
+    domain: "General-purpose assistance"
+    special_instructions:
+      - "Use available tools when they would help accomplish the task"
+```
+
+### Skills
+
+Skills are YAML files that give the agent capabilities. Each skill can provide tools, require tools from other skills, and inject prompt instructions:
+
+```yaml
+# skills/shell.yaml
+id: shell
+name: "Shell Commands"
+description: "Execute shell commands and system operations"
+version: 1
+
+activation:
+  auto: true        # Always available (or use keywords for on-demand)
+
+prompt_injection: |
+  You can execute shell commands using the 'shell' tool.
+  Always explain what command you're about to run and why.
+```
+
+Skills can also define tools with command templates:
+
+```yaml
+tools:
+  provides:
+    - name: web_search
+      description: "Search the web"
+      command: "curl -s 'https://api.search.example/q={query}'"
+      parameters:
+        query:
+          type: string
+          required: true
+```
+
+### Tools
+
+Built-in tools:
+
+| Tool | Description |
+|------|-------------|
+| `shell` | Execute system commands with timeout |
+| `file_read` | Read file contents |
+| `file_write` | Create or overwrite files |
+| `file_list` | List directory contents |
+| `http_fetch` | Make HTTP requests (GET, POST, PUT, DELETE) |
+
+Tools can also come from skills or plugins. All tool executions emit events and respect configurable timeouts.
+
+### Event Bus
+
+The event bus is the central integration point. Every action in the system emits a typed event. Plugins hook into events to observe or modify behavior.
+
+Key events:
+
+| Event | When | Modifiable |
+|-------|------|------------|
+| `agent:start` | Task begins | Yes |
+| `agent:end` | Task completes | No |
+| `llm:request` | Before LLM call | Yes |
+| `llm:response` | Full response received | No |
+| `tool:request` | Tool call requested | Yes (can block) |
+| `tool:result` | Tool returned | Yes (can modify result) |
+| `prompt:assemble` | Before sending to LLM | Yes |
+| `state:change` | State mutated | No |
+
+Modifiable events let hooks transform the payload or return `{ abort: true }` to cancel the action.
+
+### Persistence
+
+| Scope | Storage | Survives |
+|-------|---------|----------|
+| In-iteration | In-memory | Current loop iteration |
+| In-session | In-memory (messages array) | Current task run |
+| Across-sessions | SQLite (`sessions` table) | App restarts |
+| Permanent | SQLite (`memory` table) | Forever (user-managed) |
+
+---
+
+## Plugins
+
+Plugins implement the `HarnessPlugin` interface and can provide tools, LLM providers, event hooks, and UI contributions.
+
+```typescript
+interface HarnessPlugin {
+  id: string;
+  name: string;
+  version: string;
+
+  activate(ctx: PluginContext): Promise<void>;
+  deactivate(): Promise<void>;
+
+  tools?: ToolDefinition[];
+  providers?: LLMProvider[];
+  hooks?: HookRegistration[];
+}
+```
+
+### Example: Approval gate plugin
+
+```typescript
+const approvalGate: HarnessPlugin = {
+  id: "approval-gate",
+  name: "Tool Approval Gate",
+  version: "1.0.0",
+
+  async activate(ctx) {
+    this.dangerousTools = ctx.config.get("dangerousTools", ["shell", "file_write"]);
+  },
+  async deactivate() {},
+
+  hooks: [
+    {
+      event: "tool:request",
+      priority: 10,
+      handler: async (data) => {
+        if (this.dangerousTools.includes(data.name)) {
+          const approved = await ctx.bus.emit("user:confirm", {
+            message: `Allow ${data.name}(${JSON.stringify(data.args)})?`
+          });
+          if (!approved) return { abort: true };
+        }
+        return data;
+      }
+    }
+  ]
+};
+```
+
+Plugins are loaded from:
+- npm packages (`harness-plugin-*`)
+- Local folders (`./plugins/my-plugin`)
+- Inline objects (for programmatic use)
+
+Enable plugins in `~/.harness/config.yaml`:
+
+```yaml
+plugins:
+  enabled:
+    - "harness-telemetry"
+    - "./plugins/approval-gate"
+    - "harness-plugin-git"
+```
+
+---
+
+## LLM Providers
+
+Each provider implements a thin adapter interface -- just `chat(messages, tools) -> AsyncGenerator<ChatChunk>`. No framework lock-in.
+
+### Anthropic
+
+Uses the Messages API with SSE streaming. Handles tool_use content blocks natively.
+
+### OpenAI
+
+Streaming chat completions. Works with any OpenAI-compatible endpoint (together.ai, Groq, etc.) by setting a custom `baseUrl`.
+
+### Ollama
+
+Wraps the OpenAI provider pointed at `localhost:11434`. Works with any locally running model.
+
+---
+
+## The Agent Loop
+
+```
+START TASK
+    |
+    v
+ASSEMBLE PROMPT  (soul + skills + history + tool definitions)
+    |
+    v
+EMIT: loop_start  -->  plugins observe
+    |
+    v
+LLM REQUEST (streaming)  -->  EMIT: llm_request, llm:chunk
+    |
+    v
+PARSE RESPONSE
+    |--- text --------> EMIT: response_text
+    |--- tool_call ---> EMIT: tool_request
+    |
+    v (if tool_call)
+EXECUTE TOOL  -->  EMIT: tool_start, tool_result
+    |
+    v
+UPDATE STATE  -->  EMIT: state_change
+    |
+    v
+DONE?
+    |--- NO  ---> loop back to ASSEMBLE PROMPT
+    |--- YES ---> EMIT: task_end, persist state, return result
+```
+
+**Termination conditions** (checked in order):
+
+1. LLM response contains no tool calls (final answer)
+2. `maxIterations` reached (default 25)
+3. A plugin hook returns `{ abort: true }`
+4. User sends interrupt signal
+
+---
+
+## Configuration Reference
+
+### CLI flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--provider <name>` | LLM provider (`openai`, `anthropic`, `ollama`) | From config |
+| `--model <name>` | Model identifier | Provider default |
+| `--temperature <n>` | Sampling temperature (0.0-2.0) | 0.7 |
+| `--max-iterations <n>` | Max agent loop iterations | 25 |
+| `--workdir <path>` | Working directory for tools | cwd |
+| `--config <path>` | Path to config.yaml | `~/.harness/config.yaml` |
+| `--verbose` | Show event stream | false |
+
+### Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `HARNESS_HOME` | Custom config directory (default `~/.harness`) |
+
+### User directory
+
+```
+~/.harness/
+├── config.yaml          # Global settings
+├── souls/               # Custom soul documents
+├── skills/              # Custom skills
+├── plugins/             # Local plugins
+├── data/
+│   └── harness.db       # SQLite database
+└── logs/
+    └── events.jsonl     # Event log
+```
+
+---
+
+## Technology Choices
+
+| Concern | Choice | Rationale |
+|---------|--------|-----------|
+| Language | TypeScript | Runs natively in Electron, JSON-native, type-safe plugin contracts |
+| Desktop | Electron + Vite + React | Cross-platform, filesystem access, web UI for monitoring |
+| Server | Docker (Node.js) | Same codebase runs headless |
+| Package manager | pnpm | Fast, disk-efficient, workspace support |
+| Persistence | SQLite (better-sqlite3) | Zero-config, single file, works everywhere |
+| Config format | YAML | Human-editable for soul docs and skills |
+| LLM abstraction | Custom thin adapter | ~50 lines per provider, no framework lock-in |
+
+---
+
+## Development
+
+### Build all packages
+
+```bash
+pnpm install
+pnpm build
+```
+
+### Run tests
+
+```bash
+pnpm test
+```
+
+### Project layout
+
+The repo is a pnpm monorepo. Workspace packages:
+
+- `packages/core` -- `@harness/core`
+- `packages/cli` -- `@harness/cli`
+- `packages/server` -- `@harness/server`
+- `plugins/telemetry` -- `@harness/plugin-telemetry`
+
+---
+
+## Roadmap
+
+- [x] Core agent loop with streaming LLM support
+- [x] Anthropic, OpenAI, and Ollama providers
+- [x] Built-in tools (shell, file ops, HTTP)
+- [x] Soul and skill system (YAML)
+- [x] Event bus with modifiable events
+- [x] SQLite persistence
+- [x] Plugin system
+- [x] CLI entry point
+- [x] HTTP server mode (basic)
+- [ ] Electron desktop app with Chat, Monitor, Soul Editor, and Settings views
+- [ ] WebSocket streaming in server mode
+- [ ] Plugin template and development guide
+- [ ] Electron builds for macOS, Windows, Linux
+
+---
+
+## License
+
+MIT
