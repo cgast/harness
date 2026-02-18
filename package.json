@@ -11,7 +11,9 @@
     "build": "pnpm -r build",
     "clean": "pnpm -r clean",
     "test": "pnpm -r test",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "desktop": "pnpm --filter @harness/desktop dev",
+    "desktop:build": "pnpm --filter @harness/desktop build"
   },
   "engines": {
     "node": ">=20.0.0"
