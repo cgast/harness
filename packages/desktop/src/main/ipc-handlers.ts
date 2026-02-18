@@ -5,16 +5,17 @@
  * Uses invoke/handle pattern for request-response, send/on for push events.
  */
 
+import type { IpcMain, BrowserWindow, IpcMainInvokeEvent } from "electron";
 import type { AgentManager } from "./agent-manager";
 
 export function registerIpcHandlers(
-  ipcMain: Electron.IpcMain,
+  ipcMain: IpcMain,
   manager: AgentManager,
-  mainWindow: Electron.BrowserWindow
+  mainWindow: BrowserWindow
 ): void {
   // ─── Task Execution ──────────────────────────────────────
 
-  ipcMain.handle("harness:run-task", async (_event, options) => {
+  ipcMain.handle("harness:run-task", async (_event: IpcMainInvokeEvent, options: any) => {
     try {
       const result = await manager.runTask(options);
       return { ok: true, data: result };
@@ -23,7 +24,7 @@ export function registerIpcHandlers(
     }
   });
 
-  ipcMain.handle("harness:send-input", async (_event, text: string) => {
+  ipcMain.handle("harness:send-input", async (_event: IpcMainInvokeEvent, text: string) => {
     try {
       await manager.sendUserInput(text);
       return { ok: true };
@@ -38,7 +39,7 @@ export function registerIpcHandlers(
 
   // ─── Feedback / HITL ─────────────────────────────────────
 
-  ipcMain.handle("harness:feedback-respond", async (_event, requestId: string, response: any) => {
+  ipcMain.handle("harness:feedback-respond", async (_event: IpcMainInvokeEvent, requestId: string, response: any) => {
     try {
       manager.respondToFeedback(requestId, response);
       return { ok: true };
@@ -67,7 +68,7 @@ export function registerIpcHandlers(
     return { ok: true, data: manager.getTools() };
   });
 
-  ipcMain.handle("harness:tools-unregister", async (_event, name: string) => {
+  ipcMain.handle("harness:tools-unregister", async (_event: IpcMainInvokeEvent, name: string) => {
     try {
       const removed = manager.unregisterTool(name);
       return { ok: true, data: removed };
@@ -82,7 +83,7 @@ export function registerIpcHandlers(
     return { ok: true, data: manager.getSkills() };
   });
 
-  ipcMain.handle("harness:skills-activate", async (_event, skillId: string) => {
+  ipcMain.handle("harness:skills-activate", async (_event: IpcMainInvokeEvent, skillId: string) => {
     try {
       manager.activateSkill(skillId);
       return { ok: true };
@@ -91,7 +92,7 @@ export function registerIpcHandlers(
     }
   });
 
-  ipcMain.handle("harness:skills-deactivate", async (_event, skillId: string) => {
+  ipcMain.handle("harness:skills-deactivate", async (_event: IpcMainInvokeEvent, skillId: string) => {
     try {
       manager.deactivateSkill(skillId);
       return { ok: true };
@@ -108,15 +109,15 @@ export function registerIpcHandlers(
 
   // ─── Sessions ────────────────────────────────────────────
 
-  ipcMain.handle("harness:sessions-list", async (_event, limit?: number) => {
+  ipcMain.handle("harness:sessions-list", async (_event: IpcMainInvokeEvent, limit?: number) => {
     return { ok: true, data: manager.getSessions(limit) };
   });
 
-  ipcMain.handle("harness:sessions-get", async (_event, id: string) => {
+  ipcMain.handle("harness:sessions-get", async (_event: IpcMainInvokeEvent, id: string) => {
     return { ok: true, data: manager.getSession(id) };
   });
 
-  ipcMain.handle("harness:events-list", async (_event, sessionId: string, limit?: number) => {
+  ipcMain.handle("harness:events-list", async (_event: IpcMainInvokeEvent, sessionId: string, limit?: number) => {
     return { ok: true, data: manager.getEvents(sessionId, limit) };
   });
 
@@ -130,7 +131,7 @@ export function registerIpcHandlers(
     return { ok: true, data: manager.getConfig() };
   });
 
-  ipcMain.handle("harness:config-update", async (_event, partial: any) => {
+  ipcMain.handle("harness:config-update", async (_event: IpcMainInvokeEvent, partial: any) => {
     try {
       manager.updateConfig(partial);
       return { ok: true };

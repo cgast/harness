@@ -97,13 +97,13 @@ export class AgentManager {
 
     // Set up feedback adapter for desktop UI
     const desktopAdapter = new CallbackFeedbackAdapter(
-      "desktop-ui",
       async (request: FeedbackRequest): Promise<FeedbackResponse> => {
         return new Promise((resolve) => {
           this.pendingFeedback.set(request.id, { request, resolve });
           this.emitToRenderer("feedback:ui-request", request);
         });
-      }
+      },
+      { id: "desktop-ui" }
     );
     this.agent.feedback.registerAdapter(desktopAdapter);
 

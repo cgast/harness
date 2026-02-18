@@ -5,34 +5,7 @@
  * exposed via the preload script at window.harness.
  */
 
-// The harness API is injected by the preload script
-declare global {
-  interface Window {
-    harness: {
-      runTask(options: { task: string; provider?: string; model?: string; temperature?: number; maxIterations?: number }): Promise<{ ok: boolean; data?: any; error?: string }>;
-      sendInput(text: string): Promise<{ ok: boolean; error?: string }>;
-      isRunning(): Promise<{ ok: boolean; data?: boolean }>;
-      feedbackRespond(requestId: string, response: unknown): Promise<{ ok: boolean }>;
-      feedbackPending(): Promise<{ ok: boolean; data?: any[] }>;
-      getTelemetry(): Promise<{ ok: boolean; data?: any }>;
-      getTools(): Promise<{ ok: boolean; data?: any[] }>;
-      unregisterTool(name: string): Promise<{ ok: boolean }>;
-      getSkills(): Promise<{ ok: boolean; data?: any[] }>;
-      activateSkill(skillId: string): Promise<{ ok: boolean }>;
-      deactivateSkill(skillId: string): Promise<{ ok: boolean }>;
-      getPlugins(): Promise<{ ok: boolean; data?: any[] }>;
-      getSessions(limit?: number): Promise<{ ok: boolean; data?: any[] }>;
-      getSession(id: string): Promise<{ ok: boolean; data?: any }>;
-      getSessionEvents(sessionId: string, limit?: number): Promise<{ ok: boolean; data?: any[] }>;
-      getState(): Promise<{ ok: boolean; data?: any }>;
-      getConfig(): Promise<{ ok: boolean; data?: any }>;
-      updateConfig(partial: Record<string, unknown>): Promise<{ ok: boolean }>;
-      getMessages(): Promise<{ ok: boolean; data?: any[] }>;
-      onEvent(callback: (payload: { event: string; data: unknown }) => void): void;
-      onMenuAction(action: string, callback: () => void): void;
-    };
-  }
-}
+// The harness API type is declared in harness.d.ts
 
 // ═══════════════════════════════════════════════════════════
 // State

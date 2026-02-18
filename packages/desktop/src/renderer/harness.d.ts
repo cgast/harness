@@ -3,7 +3,7 @@
  * exposed to the renderer via contextBridge.
  */
 
-interface IpcResult<T = unknown> {
+interface IpcResult<T = any> {
   ok: boolean;
   data?: T;
   error?: string;
