@@ -4,6 +4,7 @@
  */
 
 import type { Message, ToolDefinitionSchema } from "../providers/provider.js";
+import type { FeedbackRequest, FeedbackResponse } from "../feedback/types.js";
 
 // All event names as a union type
 export type EventName =
@@ -28,7 +29,11 @@ export type EventName =
   | "user:interrupt"
   | "user:confirm"
   | "skill:activate"
-  | "skill:deactivate";
+  | "skill:deactivate"
+  | "feedback:request"
+  | "feedback:response"
+  | "feedback:timeout"
+  | "feedback:cancel";
 
 // Event payload map: maps event names to their data types
 export interface EventPayloads {
@@ -119,6 +124,27 @@ export interface EventPayloads {
   "skill:deactivate": {
     skillId: string;
   };
+
+  // Feedback (human-in-the-loop) events
+  "feedback:request": {
+    request: FeedbackRequest;
+    adapterId: string;
+  };
+  "feedback:response": {
+    request: FeedbackRequest;
+    response: FeedbackResponse;
+    adapterId: string;
+    durationMs: number;
+  };
+  "feedback:timeout": {
+    request: FeedbackRequest;
+    adapterId: string;
+    timeoutMs: number;
+  };
+  "feedback:cancel": {
+    requestId: string;
+    reason: string;
+  };
 }
 
 // Modifiable events - hooks can modify data or abort
@@ -131,4 +157,5 @@ export const MODIFIABLE_EVENTS: Set<EventName> = new Set([
   "tool:request",
   "tool:result",
   "user:input",
+  "feedback:request",
 ]);

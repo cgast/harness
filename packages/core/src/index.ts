@@ -34,6 +34,40 @@ export type { SoulDocument, SoulLayer } from "./soul/loader.js";
 export type { SkillDocument } from "./skills/loader.js";
 export type { AgentStateData } from "./engine/state.js";
 
+// Feedback (human-in-the-loop) types
+export type {
+  FeedbackType,
+  FeedbackRequest,
+  FeedbackRequestBase,
+  FeedbackResponse,
+  FeedbackResponseBase,
+  FeedbackStatus,
+  ConfirmFeedbackRequest,
+  ChoiceFeedbackRequest,
+  TextFeedbackRequest,
+  ReviewFeedbackRequest,
+  FormFeedbackRequest,
+  ConfirmFeedbackResponse,
+  ChoiceFeedbackResponse,
+  TextFeedbackResponse,
+  ReviewFeedbackResponse,
+  FormFeedbackResponse,
+  TimeoutFeedbackResponse,
+  CancelledFeedbackResponse,
+  ErrorFeedbackResponse,
+  ReviewVerdict,
+  FormField,
+  FeedbackAdapter,
+  FeedbackManagerConfig,
+  ChainContext,
+  ChainResult,
+  StepOutcome,
+  TaskStepDef,
+  GateStepDef,
+  TransformStepDef,
+  GateConfig,
+} from "./feedback/index.js";
+
 // Re-export classes
 export { EventBus } from "./events/bus.js";
 export { AgentState } from "./engine/state.js";
@@ -45,6 +79,15 @@ export { PluginLoader } from "./plugins/loader.js";
 export { OpenAIProvider } from "./providers/openai.js";
 export { AnthropicProvider } from "./providers/anthropic.js";
 export { createOllamaProvider } from "./providers/ollama.js";
+
+// Feedback (human-in-the-loop) classes
+export {
+  CallbackFeedbackAdapter,
+  DeferredFeedbackAdapter,
+  AutoApproveAdapter,
+} from "./feedback/index.js";
+export { FeedbackManager } from "./feedback/index.js";
+export { TaskChain } from "./feedback/index.js";
 
 // Re-export functions
 export { loadSoul, findSoul } from "./soul/loader.js";
@@ -80,6 +123,7 @@ import type { PersistenceStore } from "./persistence/store.js";
 import type { HarnessPlugin } from "./plugins/plugin.js";
 import type { SoulDocument } from "./soul/loader.js";
 import type { SkillDocument } from "./skills/loader.js";
+import { FeedbackManager } from "./feedback/index.js";
 
 // ============================================================
 // High-level API
@@ -110,6 +154,14 @@ export interface HarnessConfig {
   plugins?: {
     enabled?: string[];
   };
+
+  // Human-in-the-loop feedback
+  feedback?: {
+    /** Default timeout for feedback requests (ms). Default: 300000 (5 min). */
+    defaultTimeout?: number;
+    /** Default priority for feedback requests. Default: 100. */
+    defaultPriority?: number;
+  };
 }
 
 export interface HarnessAgent {
@@ -118,6 +170,7 @@ export interface HarnessAgent {
   bus: EventBus;
   tools: ToolRegistry;
   store: PersistenceStore;
+  feedback: FeedbackManager;
 }
 
 /**
@@ -284,6 +337,9 @@ export async function createAgent(
     });
   });
 
+  // Feedback manager (human-in-the-loop)
+  const feedbackManager = new FeedbackManager(bus, state, config.feedback);
+
   // Update available tools in state
   state.set("availableTools", toolRegistry.names());
   state.set("activeSkills", allSkills.map((s) => s.id));
@@ -294,6 +350,7 @@ export async function createAgent(
     bus,
     tools: toolRegistry,
     store,
+    feedback: feedbackManager,
 
     async run(task: string): Promise<LoopResult> {
       const providerName = state.get("config").provider;
