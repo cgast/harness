@@ -1,0 +1,14 @@
+id: file-ops
+name: "File Operations"
+description: "Read, write, and list files"
+version: 1
+
+activation:
+  auto: true
+
+prompt_injection: |
+  You have access to file operations:
+  - 'file_read' to read file contents
+  - 'file_write' to create or overwrite files
+  - 'file_list' to list directory contents
+  Use these for direct file manipulation without shell commands.

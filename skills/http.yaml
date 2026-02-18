@@ -1,0 +1,11 @@
+id: http
+name: "HTTP Requests"
+description: "Fetch content from URLs"
+version: 1
+
+activation:
+  auto: true
+
+prompt_injection: |
+  You can make HTTP requests using the 'http_fetch' tool.
+  Use this to retrieve web content, call APIs, or check URLs.

@@ -1,0 +1,15 @@
+id: shell
+name: "Shell Commands"
+description: "Execute shell commands and system operations"
+version: 1
+
+activation:
+  auto: true
+
+prompt_injection: |
+  You can execute shell commands using the 'shell' tool. Use this to:
+  - Run system commands (ls, cat, grep, etc.)
+  - Execute scripts
+  - Install packages
+  - Manage files and directories
+  Always explain what command you're about to run and why.
