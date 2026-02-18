@@ -6,12 +6,19 @@
  */
 
 import * as path from "node:path";
+import type {
+  App,
+  BrowserWindow as BrowserWindowType,
+  IpcMain,
+  Menu as MenuType,
+  MenuItemConstructorOptions,
+} from "electron";
 
 // Electron imports - resolved at runtime
-let app: Electron.App;
-let BrowserWindow: typeof Electron.BrowserWindow;
-let ipcMain: Electron.IpcMain;
-let Menu: typeof Electron.Menu;
+let app: App;
+let BrowserWindow: typeof BrowserWindowType;
+let ipcMain: IpcMain;
+let Menu: typeof MenuType;
 
 async function bootstrap() {
   const electron = require("electron");
@@ -74,7 +81,7 @@ async function bootstrap() {
   });
 }
 
-function createMainWindow(): Electron.BrowserWindow {
+function createMainWindow(): BrowserWindowType {
   const preloadPath = path.join(__dirname, "..", "preload", "index.js");
   const rendererPath = path.join(__dirname, "..", "renderer", "index.html");
 
@@ -105,8 +112,8 @@ function createMainWindow(): Electron.BrowserWindow {
   return win;
 }
 
-function buildMenu(mainWindow: Electron.BrowserWindow): void {
-  const template: Electron.MenuItemConstructorOptions[] = [
+function buildMenu(mainWindow: BrowserWindowType): void {
+  const template: MenuItemConstructorOptions[] = [
     {
       label: "File",
       submenu: [
