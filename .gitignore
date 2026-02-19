@@ -12,3 +12,8 @@ logs/
 .DS_Store
 coverage/
 .turbo/
+
+# Electron build artifacts
+bundle/
+release/
+*.blockmap

@@ -1,0 +1,73 @@
+appId: com.harness.desktop
+productName: Harness Desktop
+copyright: Copyright © 2024 Harness Contributors
+
+# The bundle/ directory contains the self-contained app produced by esbuild.
+# electron-builder will install native dependencies (better-sqlite3) from the
+# package.json located there.
+directories:
+  app: bundle
+  output: release
+  buildResources: resources
+
+# Include everything in the bundle directory
+files:
+  - "**/*"
+  - "!node_modules/.cache"
+
+# Rebuild native modules for the target Electron version
+npmRebuild: true
+
+# ── macOS ──────────────────────────────────────────────────────
+mac:
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# ── Windows ────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: "${productName}-Setup-${version}-${arch}.${ext}"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+# ── Linux ──────────────────────────────────────────────────────
+linux:
+  category: Development
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+
+# ── Publishing (disabled – artifacts are uploaded via CI) ──────
+publish: null
