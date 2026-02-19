@@ -121,6 +121,30 @@ npx harness --provider openai --model gpt-4o --verbose "Summarize README.md"
 npx harness --provider ollama --model llama3.2 "Hello world"
 ```
 
+### Desktop app (Electron)
+
+```bash
+pnpm install       # installs deps and rebuilds native modules for Electron
+pnpm build         # build all packages
+pnpm desktop       # launch the Electron app
+```
+
+The `postinstall` step in `packages/desktop` automatically runs `electron-rebuild` to compile native modules (like `better-sqlite3`) against Electron's Node.js ABI. If you see `NODE_MODULE_VERSION` mismatch errors, re-run:
+
+```bash
+pnpm --filter @harness/desktop rebuild-native
+```
+
+#### NixOS
+
+NixOS requires an FHS-compatible environment for Electron. A `shell.nix` is provided:
+
+```bash
+nix-shell            # enter FHS environment with all Electron dependencies
+pnpm install         # install and rebuild native modules
+pnpm desktop         # launch
+```
+
 ### Server mode
 
 ```bash
@@ -493,6 +517,7 @@ The repo is a pnpm monorepo. Workspace packages:
 - `packages/core` -- `@harness/core`
 - `packages/cli` -- `@harness/cli`
 - `packages/server` -- `@harness/server`
+- `packages/desktop` -- `@harness/desktop` (Electron)
 - `plugins/telemetry` -- `@harness/plugin-telemetry`
 
 ---
