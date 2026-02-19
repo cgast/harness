@@ -14,7 +14,6 @@
     "dist:mac": "npm run bundle && electron-builder --config electron-builder.yml --mac",
     "dist:win": "npm run bundle && electron-builder --config electron-builder.yml --win",
     "dist:linux": "npm run bundle && electron-builder --config electron-builder.yml --linux",
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild-native": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
