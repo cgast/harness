@@ -12,6 +12,9 @@ export interface HookRegistration<E extends EventName = EventName> {
   priority?: number; // Lower = earlier, default 100
 }
 
+/** A union of HookRegistration for every concrete event name, so heterogeneous hook arrays type-check. */
+export type AnyHookRegistration = { [E in EventName]: HookRegistration<E> }[EventName];
+
 interface RegisteredHook {
   event: EventName;
   handler: (data: any) => Promise<void | any>;

@@ -68,7 +68,7 @@ export class PluginLoader {
     // Register plugin's hooks
     if (plugin.hooks) {
       for (const hook of plugin.hooks) {
-        bus.on(hook.event, hook.handler, hook.priority);
+        bus.on(hook.event, hook.handler as any, hook.priority);
       }
     }
 

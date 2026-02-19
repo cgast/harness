@@ -14,11 +14,14 @@
     "dist:mac": "npm run bundle && electron-builder --config electron-builder.yml --mac",
     "dist:win": "npm run bundle && electron-builder --config electron-builder.yml --win",
     "dist:linux": "npm run bundle && electron-builder --config electron-builder.yml --linux"
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "rebuild-native": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "@harness/core": "workspace:*"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.7.0",
     "typescript": "^5.7.0",
     "@types/node": "^22.0.0",
     "electron": "^33.0.0",
