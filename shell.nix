@@ -10,9 +10,12 @@
 #
 { pkgs ? import <nixpkgs> {} }:
 
+let
+  lib = pkgs.lib;
+in
 (pkgs.buildFHSEnv {
   name = "harness-dev";
-  targetPkgs = pkgs: with pkgs; [
+  targetPkgs = pkgs: (with pkgs; [
     # Build tools
     nodejs_22
     pnpm
@@ -63,6 +66,8 @@
     xorg.libXrender
     xorg.libXtst
     xorg.libXScrnSaver
-  ];
+  ])
+  # libgbm was split from mesa in nixpkgs 25.05+
+  ++ lib.optional (pkgs ? libgbm) pkgs.libgbm;
   runScript = "bash";
 }).env
