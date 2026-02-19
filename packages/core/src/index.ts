@@ -28,7 +28,7 @@ export type {
 
 export type { HarnessPlugin, PluginContext, PluginConfig, Logger } from "./plugins/plugin.js";
 export type { EventName, EventPayloads } from "./events/events.js";
-export type { HookRegistration } from "./events/bus.js";
+export type { HookRegistration, AnyHookRegistration } from "./events/bus.js";
 export type { PersistenceStore, SessionRecord, MemoryRecord, EventLogRecord } from "./persistence/store.js";
 export type { SoulDocument, SoulLayer } from "./soul/loader.js";
 export type { SkillDocument } from "./skills/loader.js";
