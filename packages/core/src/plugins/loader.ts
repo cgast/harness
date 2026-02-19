@@ -34,6 +34,22 @@ export function createPluginConfig(
 
 export class PluginLoader {
   private loaded: Map<string, HarnessPlugin> = new Map();
+  private pluginDirs: string[];
+
+  constructor(pluginDirs?: string[]) {
+    this.pluginDirs = pluginDirs ?? [path.resolve(process.cwd(), "plugins")];
+    // Also discover plugins/ in ancestor directories (handles monorepo sub-packages)
+    let dir = process.cwd();
+    while (true) {
+      const parent = path.dirname(dir);
+      if (parent === dir) break; // reached filesystem root
+      const candidate = path.join(parent, "plugins");
+      if (!this.pluginDirs.includes(candidate) && fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
+        this.pluginDirs.push(candidate);
+      }
+      dir = parent;
+    }
+  }
 
   /**
    * Load a plugin from a module path or an inline plugin object.
@@ -50,7 +66,9 @@ export class PluginLoader {
       // Load from path or plugin name
       const resolved = this.resolvePluginPath(pluginOrPath);
       const mod = await import(resolved);
-      plugin = mod.default || mod;
+      // Handle CJS/ESM interop: CJS with __esModule + exports.default
+      // gets double-wrapped when loaded via import()
+      plugin = mod.default?.default || mod.default || mod;
     } else {
       plugin = pluginOrPath;
     }
@@ -101,14 +119,16 @@ export class PluginLoader {
       // Not an installed package, continue
     }
 
-    // 3. Scan plugins/ directory relative to cwd
-    const pluginsDir = path.resolve(process.cwd(), "plugins");
-    if (fs.existsSync(pluginsDir) && fs.statSync(pluginsDir).isDirectory()) {
+    // 3. Scan configured plugin directories
+    for (const pluginsDir of this.pluginDirs) {
+      if (!fs.existsSync(pluginsDir) || !fs.statSync(pluginsDir).isDirectory()) continue;
+
       const candidates: string[] = [];
       try {
         candidates.push(...fs.readdirSync(pluginsDir));
       } catch {
         // Can't read plugins dir, skip
+        continue;
       }
 
       for (const dir of candidates) {

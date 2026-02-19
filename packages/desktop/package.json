@@ -5,7 +5,7 @@
   "main": "./dist/main/index.js",
   "type": "commonjs",
   "scripts": {
-    "build": "tsc && node -e \"const fs=require('fs');const p=require('path');const src='src/renderer';const dst='dist/renderer';for(const f of fs.readdirSync(src)){if(/\\.(html|css)$/.test(f)){fs.cpSync(p.join(src,f),p.join(dst,f))}}\"",
+    "build": "tsc && tsc -p tsconfig.renderer.json && node -e \"const fs=require('fs');const p=require('path');const src='src/renderer';const dst='dist/renderer';for(const f of fs.readdirSync(src)){if(/\\.(html|css)$/.test(f)){fs.cpSync(p.join(src,f),p.join(dst,f))}}\"",
     "clean": "rm -rf dist",
     "start": "electron ./dist/main/index.js",
     "dev": "npm run build && electron ./dist/main/index.js",

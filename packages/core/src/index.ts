@@ -302,7 +302,11 @@ export async function createAgent(
   }
 
   // Plugin loader
-  const pluginLoader = new PluginLoader();
+  const pluginDirs = [
+    path.join(home, "plugins"),
+    path.join(process.cwd(), "plugins"),
+  ];
+  const pluginLoader = new PluginLoader(pluginDirs);
 
   // Load plugins from config
   if (config.plugins?.enabled) {
