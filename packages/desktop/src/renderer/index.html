@@ -23,6 +23,7 @@
         <button class="tab" data-panel="telemetry">Telemetry</button>
         <button class="tab" data-panel="events">Events</button>
         <button class="tab" data-panel="sessions">Sessions</button>
+        <button class="tab" data-panel="settings">Settings</button>
       </nav>
     </div>
     <div class="top-bar-right">
@@ -118,6 +119,83 @@
       </div>
       <div id="sessions-list" class="sessions-list"></div>
       <div id="session-detail" class="session-detail hidden"></div>
+    </section>
+
+    <!-- ═══ Settings Panel ═══ -->
+    <section id="panel-settings" class="panel">
+      <div class="panel-header">
+        <h2>Settings</h2>
+        <span id="settings-status" class="settings-status"></span>
+      </div>
+      <div class="settings-form">
+
+        <div class="settings-section">
+          <h3>API Keys</h3>
+
+          <div class="settings-field">
+            <label class="settings-label" for="settings-openai-key">OpenAI API Key</label>
+            <div class="settings-input-row">
+              <input id="settings-openai-key" type="password" class="settings-input" placeholder="sk-..." autocomplete="off" />
+              <button class="btn btn-small settings-toggle-vis" data-target="settings-openai-key">Show</button>
+            </div>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label" for="settings-openai-base-url">OpenAI Base URL <span class="text-muted">(optional)</span></label>
+            <input id="settings-openai-base-url" type="text" class="settings-input" placeholder="https://api.openai.com/v1" autocomplete="off" />
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label" for="settings-anthropic-key">Anthropic API Key</label>
+            <div class="settings-input-row">
+              <input id="settings-anthropic-key" type="password" class="settings-input" placeholder="sk-ant-..." autocomplete="off" />
+              <button class="btn btn-small settings-toggle-vis" data-target="settings-anthropic-key">Show</button>
+            </div>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label" for="settings-ollama-url">Ollama Base URL</label>
+            <input id="settings-ollama-url" type="text" class="settings-input" placeholder="http://localhost:11434" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Defaults</h3>
+
+          <div class="settings-field">
+            <label class="settings-label" for="settings-default-provider">Default Provider</label>
+            <select id="settings-default-provider" class="settings-input">
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="ollama">Ollama</option>
+            </select>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label" for="settings-default-model">Default Model</label>
+            <input id="settings-default-model" type="text" class="settings-input" placeholder="gpt-4o, claude-sonnet-4-5-20250929, llama3.2..." autocomplete="off" />
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-field">
+              <label class="settings-label" for="settings-temperature">Temperature</label>
+              <input id="settings-temperature" type="number" class="settings-input" min="0" max="2" step="0.1" placeholder="0.7" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label" for="settings-max-iterations">Max Iterations</label>
+              <input id="settings-max-iterations" type="number" class="settings-input" min="1" max="100" step="1" placeholder="25" />
+            </div>
+            <div class="settings-field">
+              <label class="settings-label" for="settings-max-tokens">Max Tokens</label>
+              <input id="settings-max-tokens" type="number" class="settings-input" min="1" max="100000" step="1" placeholder="4096" />
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button id="settings-save" class="btn btn-primary">Save Settings</button>
+        </div>
+      </div>
     </section>
 
   </main>

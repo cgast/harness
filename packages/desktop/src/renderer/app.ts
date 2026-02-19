@@ -91,6 +91,7 @@ function refreshPanel(panelId: string): void {
     case "plugins": refreshPlugins(); break;
     case "telemetry": refreshTelemetry(); break;
     case "sessions": refreshSessions(); break;
+    case "settings": refreshSettings(); break;
   }
 }
 
@@ -674,6 +675,110 @@ function appendToolLog(name: string, success: boolean, duration: number, output:
 }
 
 // ═══════════════════════════════════════════════════════════
+// Settings Panel
+// ═══════════════════════════════════════════════════════════
+
+const settingsStatus = $("#settings-status");
+const settingsSaveBtn = $("#settings-save") as HTMLButtonElement;
+
+const settingsOpenaiKey = $("#settings-openai-key") as HTMLInputElement;
+const settingsOpenaiBaseUrl = $("#settings-openai-base-url") as HTMLInputElement;
+const settingsAnthropicKey = $("#settings-anthropic-key") as HTMLInputElement;
+const settingsOllamaUrl = $("#settings-ollama-url") as HTMLInputElement;
+
+const settingsDefaultProvider = $("#settings-default-provider") as HTMLSelectElement;
+const settingsDefaultModel = $("#settings-default-model") as HTMLInputElement;
+const settingsTemperature = $("#settings-temperature") as HTMLInputElement;
+const settingsMaxIterations = $("#settings-max-iterations") as HTMLInputElement;
+const settingsMaxTokens = $("#settings-max-tokens") as HTMLInputElement;
+
+async function refreshSettings(): Promise<void> {
+  const result = await window.harness.getSettings();
+  if (!result.ok || !result.data) return;
+
+  const cfg = result.data as any;
+
+  // API Keys — populate only if they have values (don't overwrite user's in-progress edits on first load)
+  settingsOpenaiKey.value = cfg.providers?.openai?.apiKey || "";
+  settingsOpenaiBaseUrl.value = cfg.providers?.openai?.baseUrl || "";
+  settingsAnthropicKey.value = cfg.providers?.anthropic?.apiKey || "";
+  settingsOllamaUrl.value = cfg.providers?.ollama?.baseUrl || "";
+
+  // Defaults
+  settingsDefaultProvider.value = cfg.defaults?.provider || "openai";
+  settingsDefaultModel.value = cfg.defaults?.soul ? "" : (
+    cfg.providers?.[cfg.defaults?.provider || "openai"]?.defaultModel || ""
+  );
+  settingsTemperature.value = cfg.defaults?.temperature?.toString() || "";
+  settingsMaxIterations.value = cfg.defaults?.maxIterations?.toString() || "";
+  settingsMaxTokens.value = cfg.defaults?.maxTokens?.toString() || "";
+}
+
+settingsSaveBtn.addEventListener("click", async () => {
+  settingsSaveBtn.disabled = true;
+  settingsStatus.textContent = "";
+
+  const settings: any = {
+    providers: {
+      openai: {
+        apiKey: settingsOpenaiKey.value.trim(),
+        baseUrl: settingsOpenaiBaseUrl.value.trim(),
+        defaultModel: settingsDefaultProvider.value === "openai" ? settingsDefaultModel.value.trim() : undefined,
+      },
+      anthropic: {
+        apiKey: settingsAnthropicKey.value.trim(),
+        defaultModel: settingsDefaultProvider.value === "anthropic" ? settingsDefaultModel.value.trim() : undefined,
+      },
+      ollama: {
+        baseUrl: settingsOllamaUrl.value.trim(),
+        defaultModel: settingsDefaultProvider.value === "ollama" ? settingsDefaultModel.value.trim() : undefined,
+      },
+    },
+    defaults: {
+      provider: settingsDefaultProvider.value,
+      temperature: settingsTemperature.value ? parseFloat(settingsTemperature.value) : undefined,
+      maxIterations: settingsMaxIterations.value ? parseInt(settingsMaxIterations.value, 10) : undefined,
+      maxTokens: settingsMaxTokens.value ? parseInt(settingsMaxTokens.value, 10) : undefined,
+    },
+  };
+
+  const result = await window.harness.saveSettings(settings);
+
+  settingsSaveBtn.disabled = false;
+
+  if (result.ok) {
+    settingsStatus.textContent = "Settings saved";
+    settingsStatus.className = "settings-status settings-status-ok";
+  } else {
+    settingsStatus.textContent = `Error: ${result.error}`;
+    settingsStatus.className = "settings-status settings-status-err";
+  }
+
+  // Clear status after a few seconds
+  setTimeout(() => {
+    settingsStatus.textContent = "";
+  }, 3000);
+});
+
+// Show/hide toggle for API key inputs
+$$(".settings-toggle-vis").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const targetId = (btn as HTMLElement).dataset.target;
+    if (!targetId) return;
+    const input = document.getElementById(targetId) as HTMLInputElement;
+    if (!input) return;
+
+    if (input.type === "password") {
+      input.type = "text";
+      btn.textContent = "Hide";
+    } else {
+      input.type = "password";
+      btn.textContent = "Show";
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
 // Menu Actions
 // ═══════════════════════════════════════════════════════════
 
@@ -687,6 +792,16 @@ window.harness.onMenuAction("new-session", () => {
 
 window.harness.onMenuAction("clear-history", () => {
   chatMessages.innerHTML = "";
+});
+
+window.harness.onMenuAction("settings", () => {
+  // Switch to settings tab
+  $$(".tab").forEach((t) => t.classList.remove("active"));
+  $$(".panel").forEach((p) => p.classList.remove("active"));
+  const settingsTab = document.querySelector('.tab[data-panel="settings"]');
+  if (settingsTab) settingsTab.classList.add("active");
+  $(`#panel-settings`)?.classList.add("active");
+  refreshSettings();
 });
 
 window.harness.onMenuAction("interrupt", async () => {

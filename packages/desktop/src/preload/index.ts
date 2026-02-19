@@ -111,6 +111,14 @@ const harnessApi = {
   updateConfig: (partial: Record<string, unknown>): Promise<IpcResult> =>
     ipcRenderer.invoke("harness:config-update", partial),
 
+  /** Get full settings (including provider API keys). */
+  getSettings: (): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:settings-get"),
+
+  /** Save settings to config file and hot-apply changes. */
+  saveSettings: (settings: Record<string, unknown>): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:settings-save", settings),
+
   // ─── Messages ────────────────────────────────────────────
 
   /** Get conversation message history. */

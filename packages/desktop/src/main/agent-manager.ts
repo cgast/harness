@@ -6,6 +6,8 @@
  */
 
 import * as path from "node:path";
+import * as fs from "node:fs";
+import YAML from "yaml";
 import {
   createAgent,
   loadConfig,
@@ -343,6 +345,108 @@ export class AgentManager {
       content: m.content,
       name: (m as any).name,
     }));
+  }
+
+  // ─── Settings (persistent config) ──────────────────────────
+
+  getSettings(): HarnessConfig {
+    return this.config;
+  }
+
+  saveSettings(settings: {
+    providers?: {
+      openai?: { apiKey?: string; defaultModel?: string; baseUrl?: string };
+      anthropic?: { apiKey?: string; defaultModel?: string };
+      ollama?: { baseUrl?: string; defaultModel?: string };
+    };
+    defaults?: {
+      provider?: string;
+      soul?: string;
+      temperature?: number;
+      maxIterations?: number;
+      maxTokens?: number;
+    };
+  }): void {
+    const home = this.config.harnessHome ||
+      process.env.HARNESS_HOME ||
+      path.join(process.env.HOME || "~", ".harness");
+    const filePath = path.join(home, "config.yaml");
+
+    // Ensure directory exists
+    if (!fs.existsSync(home)) {
+      fs.mkdirSync(home, { recursive: true });
+    }
+
+    // Read existing config file (if any) to preserve non-settings fields
+    let fileConfig: Record<string, unknown> = {};
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      fileConfig = YAML.parse(raw) || {};
+    }
+
+    // Merge providers
+    if (settings.providers) {
+      const existing = (fileConfig.providers || {}) as Record<string, unknown>;
+      if (settings.providers.openai) {
+        existing.openai = { ...(existing.openai as object || {}), ...settings.providers.openai };
+        // Remove empty keys
+        const oa = existing.openai as Record<string, unknown>;
+        if (!oa.apiKey) delete oa.apiKey;
+        if (!oa.baseUrl) delete oa.baseUrl;
+        if (Object.keys(oa).length === 0) delete existing.openai;
+      }
+      if (settings.providers.anthropic) {
+        existing.anthropic = { ...(existing.anthropic as object || {}), ...settings.providers.anthropic };
+        const an = existing.anthropic as Record<string, unknown>;
+        if (!an.apiKey) delete an.apiKey;
+        if (Object.keys(an).length === 0) delete existing.anthropic;
+      }
+      if (settings.providers.ollama) {
+        existing.ollama = { ...(existing.ollama as object || {}), ...settings.providers.ollama };
+        const ol = existing.ollama as Record<string, unknown>;
+        if (!ol.baseUrl) delete ol.baseUrl;
+        if (Object.keys(ol).length === 0) delete existing.ollama;
+      }
+      if (Object.keys(existing).length > 0) {
+        fileConfig.providers = existing;
+      } else {
+        delete fileConfig.providers;
+      }
+    }
+
+    // Merge defaults
+    if (settings.defaults) {
+      const existing = (fileConfig.defaults || {}) as Record<string, unknown>;
+      for (const [key, value] of Object.entries(settings.defaults)) {
+        if (value !== undefined && value !== null && value !== "") {
+          existing[key] = value;
+        } else {
+          delete existing[key];
+        }
+      }
+      if (Object.keys(existing).length > 0) {
+        fileConfig.defaults = existing;
+      } else {
+        delete fileConfig.defaults;
+      }
+    }
+
+    // Write config back
+    fs.writeFileSync(filePath, YAML.stringify(fileConfig), "utf-8");
+
+    // Reload in-memory config
+    this.config = loadConfig(filePath);
+
+    // Hot-apply runtime config changes
+    if (this.agent && settings.defaults) {
+      const current = this.agent.state.get("config");
+      const merged: Record<string, unknown> = { ...current };
+      if (settings.defaults.provider) merged.provider = settings.defaults.provider;
+      if (settings.defaults.temperature !== undefined) merged.temperature = settings.defaults.temperature;
+      if (settings.defaults.maxIterations !== undefined) merged.maxIterations = settings.defaults.maxIterations;
+      if (settings.defaults.maxTokens !== undefined) merged.maxTokens = settings.defaults.maxTokens;
+      this.agent.state.set("config", merged as AgentStateData["config"]);
+    }
   }
 
   // ─── Lifecycle ─────────────────────────────────────────────

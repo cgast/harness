@@ -669,6 +669,110 @@ html, body {
   vertical-align: middle;
 }
 
+/* ─── Settings Panel ─────────────────────────────────────── */
+
+.settings-form {
+  max-width: 640px;
+  overflow-y: auto;
+  flex: 1;
+  padding-bottom: 24px;
+}
+
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.settings-section h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-field {
+  margin-bottom: 14px;
+}
+
+.settings-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.settings-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.settings-input:focus {
+  border-color: var(--accent);
+}
+
+.settings-input::placeholder {
+  color: var(--text-muted);
+}
+
+select.settings-input {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.settings-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.settings-input-row .settings-input {
+  flex: 1;
+}
+
+.settings-toggle-vis {
+  flex-shrink: 0;
+  width: 52px;
+  font-size: 11px;
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.settings-actions {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-status {
+  font-size: 12px;
+  transition: opacity 0.3s;
+}
+
+.settings-status-ok {
+  color: var(--success);
+}
+
+.settings-status-err {
+  color: var(--error);
+}
+
 /* ─── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 800px) {

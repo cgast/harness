@@ -140,6 +140,25 @@ export function registerIpcHandlers(
     }
   });
 
+  // ─── Settings (persistent config) ────────────────────────
+
+  ipcMain.handle("harness:settings-get", async () => {
+    try {
+      return { ok: true, data: manager.getSettings() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:settings-save", async (_event: IpcMainInvokeEvent, settings: any) => {
+    try {
+      manager.saveSettings(settings);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
   // ─── Messages / Files ────────────────────────────────────
 
   ipcMain.handle("harness:messages", async () => {

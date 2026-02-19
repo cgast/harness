@@ -52,6 +52,10 @@ interface HarnessDesktopApi {
   getConfig(): Promise<IpcResult>;
   updateConfig(partial: Record<string, unknown>): Promise<IpcResult>;
 
+  // Settings (persistent config)
+  getSettings(): Promise<IpcResult>;
+  saveSettings(settings: Record<string, unknown>): Promise<IpcResult>;
+
   // Messages
   getMessages(): Promise<IpcResult<unknown[]>>;
 
