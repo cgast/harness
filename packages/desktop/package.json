@@ -6,17 +6,24 @@
   "type": "commonjs",
   "scripts": {
     "build": "tsc && node -e \"const fs=require('fs');const p=require('path');const src='src/renderer';const dst='dist/renderer';for(const f of fs.readdirSync(src)){if(/\\.(html|css)$/.test(f)){fs.cpSync(p.join(src,f),p.join(dst,f))}}\"",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist bundle release",
     "start": "electron ./dist/main/index.js",
-    "dev": "npm run build && electron ./dist/main/index.js"
+    "dev": "npm run build && electron ./dist/main/index.js",
+    "bundle": "node scripts/bundle.mjs",
+    "dist": "npm run bundle && electron-builder --config electron-builder.yml",
+    "dist:mac": "npm run bundle && electron-builder --config electron-builder.yml --mac",
+    "dist:win": "npm run bundle && electron-builder --config electron-builder.yml --win",
+    "dist:linux": "npm run bundle && electron-builder --config electron-builder.yml --linux"
   },
   "dependencies": {
-    "@harness/core": "workspace:*",
-    "electron": "^33.0.0"
+    "@harness/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0"
   },
   "license": "MIT"
 }
