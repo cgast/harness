@@ -10,11 +10,15 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
-    "@harness/core": "workspace:*"
+    "@harness/core": "workspace:*",
+    "ws": "^8.18.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.13",
+    "@types/uuid": "^10.0.0"
   },
   "license": "MIT"
 }
