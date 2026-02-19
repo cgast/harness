@@ -1,0 +1,20 @@
+{
+  "name": "@harness/plugin-template",
+  "version": "0.1.0",
+  "description": "Starter template for building Harness plugins",
+  "main": "./dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@harness/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  },
+  "license": "MIT"
+}
