@@ -140,13 +140,16 @@ harness/
 │   ├── cli/            # CLI entry point: `npx harness "task"`
 │   └── server/         # HTTP server mode (REST API)
 ├── plugins/
-│   └── telemetry/      # Built-in telemetry plugin
+│   ├── telemetry/      # Built-in telemetry plugin
+│   └── template/       # Starter template for new plugins
 ├── skills/             # Skill definitions (YAML)
 │   ├── shell.yaml      # Shell command execution
 │   ├── file-ops.yaml   # File read/write/list
 │   └── http.yaml       # HTTP requests
 ├── souls/              # Soul documents (YAML)
 │   └── default.yaml    # Default assistant personality
+├── docs/
+│   └── plugin-development.md  # Plugin development guide
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
 ```
@@ -344,6 +347,18 @@ plugins:
     - "harness-plugin-git"
 ```
 
+### Building your own plugin
+
+Copy the starter template and start coding:
+
+```bash
+cp -r plugins/template plugins/my-plugin
+# Edit plugins/my-plugin/src/index.ts
+# Add "my-plugin" to plugins.enabled in config
+```
+
+See the full [Plugin Development Guide](docs/plugin-development.md) for tools, event hooks, configuration, persistence, testing, and publishing.
+
 ---
 
 ## LLM Providers
@@ -495,7 +510,7 @@ The repo is a pnpm monorepo. Workspace packages:
 - [x] HTTP server mode (basic)
 - [ ] Electron desktop app with Chat, Monitor, Soul Editor, and Settings views
 - [ ] WebSocket streaming in server mode
-- [ ] Plugin template and development guide
+- [x] Plugin template and development guide
 - [ ] Electron builds for macOS, Windows, Linux
 
 ---
