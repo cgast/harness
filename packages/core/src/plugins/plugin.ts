@@ -2,7 +2,7 @@
  * Plugin interface and related types.
  */
 
-import type { EventBus, HookRegistration } from "../events/bus.js";
+import type { EventBus, AnyHookRegistration } from "../events/bus.js";
 import type { EventName } from "../events/events.js";
 import type { ToolDefinition } from "../tools/registry.js";
 import type { LLMProvider } from "../providers/provider.js";
@@ -46,6 +46,6 @@ export interface HarnessPlugin {
   // What this plugin provides (all optional)
   tools?: ToolDefinition[];
   providers?: LLMProvider[];
-  hooks?: HookRegistration[];
+  hooks?: AnyHookRegistration[];
   ui?: UIContribution;
 }
