@@ -91,6 +91,11 @@ fs.writeFileSync(
       name: pkg.name,
       version: pkg.version,
       description: pkg.description,
+      author: {
+        name: "Harness Contributors",
+        email: "harness@users.noreply.github.com",
+      },
+      homepage: "https://github.com/cgast/harness",
       main: "main/index.js",
       dependencies: {
         "better-sqlite3": "^11.8.0",
@@ -99,6 +104,14 @@ fs.writeFileSync(
     null,
     2,
   ),
+);
+
+// ── Isolate bundle from parent pnpm workspace ────────────────
+// Without this, pnpm walks up the directory tree and finds the monorepo
+// workspace root, causing electron-builder's `pnpm install` to fail.
+fs.writeFileSync(
+  path.join(outdir, "pnpm-workspace.yaml"),
+  "# Standalone workspace root — prevents pnpm from inheriting the monorepo workspace\npackages: []\n",
 );
 
 console.log("✓ Bundle complete →", outdir);
