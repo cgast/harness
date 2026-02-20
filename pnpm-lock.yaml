@@ -115,6 +115,32 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  plugins/memory:
+    dependencies:
+      '@harness/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.11
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  plugins/persistence:
+    dependencies:
+      '@harness/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.11
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   plugins/telemetry:
     dependencies:
       '@harness/core':

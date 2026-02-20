@@ -38,10 +38,17 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 COPY packages/core/package.json packages/core/tsconfig.json packages/core/
 COPY packages/server/package.json packages/server/tsconfig.json packages/server/
 
+# Copy package.json for workspace packages not built in Docker (needed so
+# pnpm can resolve the full workspace and the lockfile matches)
+COPY packages/cli/package.json packages/cli/
+COPY packages/desktop/package.json packages/desktop/
+
 # Copy plugin package.json files (workspace references)
 COPY plugins/telemetry/package.json plugins/telemetry/
 COPY plugins/human-review/package.json plugins/human-review/
 COPY plugins/template/package.json plugins/template/
+COPY plugins/memory/package.json plugins/memory/
+COPY plugins/persistence/package.json plugins/persistence/
 
 # Install dependencies (frozen lockfile for reproducibility)
 RUN pnpm install --frozen-lockfile
