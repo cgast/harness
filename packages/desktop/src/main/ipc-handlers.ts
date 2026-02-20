@@ -164,4 +164,49 @@ export function registerIpcHandlers(
   ipcMain.handle("harness:messages", async () => {
     return { ok: true, data: manager.getMessages() };
   });
+
+  // ─── Soul Files (system prompts) ─────────────────────────
+
+  ipcMain.handle("harness:soul-list", async () => {
+    try {
+      return { ok: true, data: manager.getSoulFiles() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:soul-get", async (_event: IpcMainInvokeEvent, name: string) => {
+    try {
+      return { ok: true, data: manager.getSoulFile(name) };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:soul-save", async (_event: IpcMainInvokeEvent, name: string, data: any) => {
+    try {
+      manager.saveSoulFile(name, data);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:soul-delete", async (_event: IpcMainInvokeEvent, name: string) => {
+    try {
+      manager.deleteSoulFile(name);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:soul-set-active", async (_event: IpcMainInvokeEvent, name: string) => {
+    try {
+      manager.setActiveSoul(name);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
 }

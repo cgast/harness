@@ -16,6 +16,8 @@ const state = {
   tokenHistory: [] as { input: number; output: number }[],
   eventLog: [] as { time: string; event: string; data: string }[],
   toolLog: [] as { time: string; name: string; success: boolean; duration: number; output: string }[],
+  selectedSessionId: null as string | null,
+  selectedSoulFile: null as string | null,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -25,7 +27,7 @@ const state = {
 const $ = (sel: string) => document.querySelector(sel) as HTMLElement;
 const $$ = (sel: string) => document.querySelectorAll(sel);
 
-// Top bar
+// Status bar
 const statusBadge = $("#status-badge");
 const modelLabel = $("#model-label");
 const tokenLabel = $("#token-label");
@@ -62,27 +64,36 @@ const eventsAutoScroll = $("#events-auto-scroll") as HTMLInputElement;
 const sessionsList = $("#sessions-list");
 const sessionDetail = $("#session-detail");
 
+// Soul
+const soulList = $("#soul-list");
+const soulEditor = $("#soul-editor");
+
 // ═══════════════════════════════════════════════════════════
-// Tab Navigation
+// Activity Bar Navigation
 // ═══════════════════════════════════════════════════════════
 
-$$(".tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    const panelId = (tab as HTMLElement).dataset.panel;
+$$(".activity-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const panelId = (btn as HTMLElement).dataset.panel;
     if (!panelId) return;
 
-    // Update tabs
-    $$(".tab").forEach((t) => t.classList.remove("active"));
-    tab.classList.add("active");
-
-    // Update panels
-    $$(".panel").forEach((p) => p.classList.remove("active"));
-    $(`#panel-${panelId}`)?.classList.add("active");
-
-    // Refresh panel data on switch
-    refreshPanel(panelId);
+    switchToPanel(panelId);
   });
 });
+
+function switchToPanel(panelId: string): void {
+  // Update activity bar
+  $$(".activity-btn").forEach((b) => b.classList.remove("active"));
+  const activeBtn = document.querySelector(`.activity-btn[data-panel="${panelId}"]`);
+  if (activeBtn) activeBtn.classList.add("active");
+
+  // Update panels
+  $$(".panel").forEach((p) => p.classList.remove("active"));
+  $(`#panel-${panelId}`)?.classList.add("active");
+
+  // Refresh panel data on switch
+  refreshPanel(panelId);
+}
 
 function refreshPanel(panelId: string): void {
   switch (panelId) {
@@ -92,6 +103,7 @@ function refreshPanel(panelId: string): void {
     case "telemetry": refreshTelemetry(); break;
     case "sessions": refreshSessions(); break;
     case "settings": refreshSettings(); break;
+    case "soul": refreshSoulFiles(); break;
   }
 }
 
@@ -348,7 +360,7 @@ async function refreshTelemetry(): Promise<void> {
     </div>
   `;
 
-  // Update top bar
+  // Update status bar
   modelLabel.textContent = `${t.provider}/${t.model}`;
   tokenLabel.textContent = `${t.tokenUsage.input + t.tokenUsage.output} tokens`;
 
@@ -423,7 +435,7 @@ $("#events-clear")?.addEventListener("click", () => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// Sessions Panel
+// Sessions Panel (split view)
 // ═══════════════════════════════════════════════════════════
 
 async function refreshSessions(): Promise<void> {
@@ -439,14 +451,20 @@ async function refreshSessions(): Promise<void> {
   }
 
   for (const s of sessions) {
-    const row = document.createElement("div");
-    row.className = "session-row";
-    row.innerHTML = `
-      <span class="session-task">${esc(s.task)}</span>
-      <span class="session-meta">${esc(s.id.slice(0, 8))} | ${esc(s.createdAt || "")}</span>
+    const item = document.createElement("div");
+    item.className = `sidebar-item${state.selectedSessionId === s.id ? " active" : ""}`;
+    item.innerHTML = `
+      <span class="sidebar-item-title">${esc(s.task)}</span>
+      <span class="sidebar-item-meta">${esc(s.id.slice(0, 6))}</span>
     `;
-    row.addEventListener("click", () => showSessionDetail(s.id));
-    sessionsList.appendChild(row);
+    item.addEventListener("click", () => {
+      // Update selection
+      sessionsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
+      item.classList.add("active");
+      state.selectedSessionId = s.id;
+      showSessionDetail(s.id);
+    });
+    sessionsList.appendChild(item);
   }
 }
 
@@ -455,7 +473,6 @@ async function showSessionDetail(id: string): Promise<void> {
   if (!result.ok || !result.data) return;
 
   const s = result.data;
-  sessionDetail.classList.remove("hidden");
 
   let messagesHtml = "";
   try {
@@ -476,15 +493,142 @@ async function showSessionDetail(id: string): Promise<void> {
   }
 
   sessionDetail.innerHTML = `
-    <h3 style="margin-bottom: 8px;">Session: ${esc(id.slice(0, 12))}...</h3>
-    <div class="card-meta" style="margin-bottom: 12px;">
-      Task: ${esc(s.task)} | Soul: ${esc(s.soulId || "none")} | Tokens: ${tokenHtml} | Created: ${esc(s.createdAt)} | Ended: ${esc(s.endedAt || "ongoing")}
+    <div class="session-detail-header">
+      <h3>Session: ${esc(id.slice(0, 12))}...</h3>
+      <div class="card-meta">
+        Task: ${esc(s.task)} | Soul: ${esc(s.soulId || "none")} | Tokens: ${tokenHtml} | Created: ${esc(s.createdAt)} | Ended: ${esc(s.endedAt || "ongoing")}
+      </div>
     </div>
-    <div>${messagesHtml}</div>
+    <div class="session-detail-messages">${messagesHtml}</div>
   `;
 }
 
 $("#sessions-refresh")?.addEventListener("click", refreshSessions);
+
+// ═══════════════════════════════════════════════════════════
+// System Prompt / Soul Files Panel
+// ═══════════════════════════════════════════════════════════
+
+async function refreshSoulFiles(): Promise<void> {
+  const result = await window.harness.getSoulFiles();
+  if (!result.ok || !result.data) return;
+
+  soulList.innerHTML = "";
+  const files: any[] = result.data;
+
+  if (files.length === 0) {
+    soulList.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">No soul files found</div>';
+    return;
+  }
+
+  for (const f of files) {
+    const item = document.createElement("div");
+    item.className = `sidebar-item${state.selectedSoulFile === f.name ? " active" : ""}`;
+    item.innerHTML = `
+      <span class="sidebar-item-title">${esc(f.name)}</span>
+      ${f.active ? '<span class="card-tag card-tag-active" style="font-size:9px;">active</span>' : ""}
+    `;
+    item.addEventListener("click", () => {
+      soulList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
+      item.classList.add("active");
+      state.selectedSoulFile = f.name;
+      showSoulEditor(f.name);
+    });
+    soulList.appendChild(item);
+  }
+}
+
+async function showSoulEditor(name: string): Promise<void> {
+  const result = await window.harness.getSoulFile(name);
+  if (!result.ok || !result.data) {
+    soulEditor.innerHTML = `<div class="empty-state text-error">Failed to load soul file</div>`;
+    return;
+  }
+
+  const soul = result.data;
+
+  soulEditor.innerHTML = `
+    <div class="soul-editor-header">
+      <h3>${esc(soul.name || name)}</h3>
+      <div style="display:flex;gap:6px;">
+        <button id="soul-save-btn" class="btn btn-primary btn-small">Save</button>
+        <button id="soul-activate-btn" class="btn btn-small">${soul.active ? "Deactivate" : "Set Active"}</button>
+        <button id="soul-delete-btn" class="btn btn-small btn-danger">Delete</button>
+      </div>
+    </div>
+    <div class="soul-meta-grid">
+      <div class="soul-meta-field">
+        <label>Name</label>
+        <input id="soul-edit-name" type="text" value="${esc(soul.name || "")}" />
+      </div>
+      <div class="soul-meta-field">
+        <label>Description</label>
+        <input id="soul-edit-desc" type="text" value="${esc(soul.description || "")}" />
+      </div>
+      <div class="soul-meta-field">
+        <label>Model Hint</label>
+        <input id="soul-edit-model" type="text" value="${esc(soul.modelHint || "")}" placeholder="optional" />
+      </div>
+    </div>
+    <div class="soul-prompt-area">
+      <label>System Prompt</label>
+      <textarea id="soul-edit-prompt">${esc(soul.systemPrompt || "")}</textarea>
+    </div>
+  `;
+
+  // Bind save
+  $("#soul-save-btn")?.addEventListener("click", async () => {
+    const updated = {
+      name: ($("#soul-edit-name") as HTMLInputElement).value.trim(),
+      description: ($("#soul-edit-desc") as HTMLInputElement).value.trim(),
+      modelHint: ($("#soul-edit-model") as HTMLInputElement).value.trim(),
+      systemPrompt: ($("#soul-edit-prompt") as HTMLTextAreaElement).value,
+    };
+    const saveResult = await window.harness.saveSoulFile(name, updated);
+    if (saveResult.ok) {
+      state.selectedSoulFile = updated.name || name;
+      refreshSoulFiles();
+    }
+  });
+
+  // Bind activate/deactivate
+  $("#soul-activate-btn")?.addEventListener("click", async () => {
+    if (soul.active) {
+      await window.harness.setActiveSoul("");
+    } else {
+      await window.harness.setActiveSoul(name);
+    }
+    refreshSoulFiles();
+    showSoulEditor(name);
+  });
+
+  // Bind delete
+  $("#soul-delete-btn")?.addEventListener("click", async () => {
+    const delResult = await window.harness.deleteSoulFile(name);
+    if (delResult.ok) {
+      state.selectedSoulFile = null;
+      soulEditor.innerHTML = '<div class="empty-state"><div class="empty-state-icon">S</div>Select or create a soul file</div>';
+      refreshSoulFiles();
+    }
+  });
+}
+
+// New soul file button
+$("#soul-new")?.addEventListener("click", async () => {
+  const result = await window.harness.saveSoulFile("new-soul", {
+    name: "New Soul",
+    description: "",
+    modelHint: "",
+    systemPrompt: "You are a helpful assistant.",
+  });
+  if (result.ok) {
+    state.selectedSoulFile = "new-soul";
+    refreshSoulFiles();
+    showSoulEditor("new-soul");
+  }
+});
+
+$("#soul-refresh")?.addEventListener("click", refreshSoulFiles);
 
 // ═══════════════════════════════════════════════════════════
 // Feedback (HITL) UI
@@ -795,13 +939,7 @@ window.harness.onMenuAction("clear-history", () => {
 });
 
 window.harness.onMenuAction("settings", () => {
-  // Switch to settings tab
-  $$(".tab").forEach((t) => t.classList.remove("active"));
-  $$(".panel").forEach((p) => p.classList.remove("active"));
-  const settingsTab = document.querySelector('.tab[data-panel="settings"]');
-  if (settingsTab) settingsTab.classList.add("active");
-  $(`#panel-settings`)?.classList.add("active");
-  refreshSettings();
+  switchToPanel("settings");
 });
 
 window.harness.onMenuAction("interrupt", async () => {
