@@ -48,12 +48,6 @@
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
           </svg>
         </button>
-        <button class="activity-btn" data-panel="sessions" title="Sessions">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </button>
         <button class="activity-btn" data-panel="soul" title="System Prompt / Soul">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -84,55 +78,102 @@
     <!-- ═══ Content Area (panels) ═══ -->
     <div id="content-area">
 
-      <!-- ═══ Chat Panel ═══ -->
+      <!-- ═══ Chat Panel (merged with sessions: list left, chat right) ═══ -->
       <section id="panel-chat" class="panel active">
-        <div id="chat-messages" class="chat-messages"></div>
-        <div id="feedback-bar" class="feedback-bar hidden">
-          <div id="feedback-content"></div>
-        </div>
-        <form id="chat-form" class="chat-input-area">
-          <textarea id="chat-input" placeholder="Enter a task for the agent..." rows="2"></textarea>
-          <div class="chat-input-controls">
-            <select id="provider-select">
-              <option value="anthropic">Anthropic</option>
-              <option value="openai">OpenAI</option>
-              <option value="ollama">Ollama</option>
-            </select>
-            <input id="model-input" type="text" placeholder="model (optional)" />
-            <button type="submit" id="run-btn" class="btn btn-primary">Run</button>
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Sessions</h3>
+              <button id="sessions-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="sessions-list" class="sidebar-list"></div>
+            <div class="panel-sidebar-footer">
+              <button id="new-session-btn" class="btn btn-small btn-primary" style="width:100%">New Session</button>
+            </div>
           </div>
-        </form>
+          <div class="panel-main" style="padding:0;display:flex;flex-direction:column;">
+            <div id="chat-messages" class="chat-messages"></div>
+            <div id="feedback-bar" class="feedback-bar hidden">
+              <div id="feedback-content"></div>
+            </div>
+            <form id="chat-form" class="chat-input-area">
+              <textarea id="chat-input" placeholder="Enter a task for the agent..." rows="2"></textarea>
+              <div class="chat-input-controls">
+                <select id="provider-select">
+                  <option value="anthropic">Anthropic</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="ollama">Ollama</option>
+                </select>
+                <input id="model-input" type="text" placeholder="model (optional)" />
+                <button type="submit" id="run-btn" class="btn btn-primary">Run</button>
+              </div>
+            </form>
+          </div>
+        </div>
       </section>
 
-      <!-- ═══ Tools Panel ═══ -->
+      <!-- ═══ Tools Panel (split: list left, definition+log right) ═══ -->
       <section id="panel-tools" class="panel">
-        <div class="panel-header">
-          <h2>Registered Tools</h2>
-          <button id="tools-refresh" class="btn btn-small">Refresh</button>
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Tools</h3>
+              <button id="tools-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="tools-list" class="sidebar-list"></div>
+          </div>
+          <div class="panel-main" style="padding:0;display:flex;flex-direction:column;">
+            <div id="tool-detail" class="detail-split">
+              <div class="detail-section detail-section-top">
+                <div class="detail-section-header"><h3>Definition</h3></div>
+                <div id="tool-definition" class="detail-section-body">
+                  <div class="empty-state"><div class="empty-state-icon">T</div>Select a tool to view its definition</div>
+                </div>
+              </div>
+              <div class="detail-divider"></div>
+              <div class="detail-section detail-section-bottom">
+                <div class="detail-section-header"><h3>Execution Log</h3></div>
+                <div id="tools-log" class="log-area" style="border-radius:0;border:none;flex:1;"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div id="tools-list" class="card-grid"></div>
-        <div class="panel-header" style="margin-top: 1rem;">
-          <h2>Tool Execution Log</h2>
-        </div>
-        <div id="tools-log" class="log-area"></div>
       </section>
 
-      <!-- ═══ Skills Panel ═══ -->
+      <!-- ═══ Skills Panel (split: list left, detail right) ═══ -->
       <section id="panel-skills" class="panel">
-        <div class="panel-header">
-          <h2>Skills</h2>
-          <button id="skills-refresh" class="btn btn-small">Refresh</button>
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Skills</h3>
+              <button id="skills-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="skills-list" class="sidebar-list"></div>
+          </div>
+          <div class="panel-main">
+            <div id="skill-detail">
+              <div class="empty-state"><div class="empty-state-icon">S</div>Select a skill to view details</div>
+            </div>
+          </div>
         </div>
-        <div id="skills-list" class="card-grid"></div>
       </section>
 
-      <!-- ═══ Plugins Panel ═══ -->
+      <!-- ═══ Plugins Panel (split: list left, detail right) ═══ -->
       <section id="panel-plugins" class="panel">
-        <div class="panel-header">
-          <h2>Loaded Plugins</h2>
-          <button id="plugins-refresh" class="btn btn-small">Refresh</button>
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Plugins</h3>
+              <button id="plugins-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="plugins-list" class="sidebar-list"></div>
+          </div>
+          <div class="panel-main">
+            <div id="plugin-detail">
+              <div class="empty-state"><div class="empty-state-icon">P</div>Select a plugin to view details</div>
+            </div>
+          </div>
         </div>
-        <div id="plugins-list" class="card-grid"></div>
       </section>
 
       <!-- ═══ Telemetry Panel ═══ -->
@@ -148,35 +189,36 @@
         <div id="telemetry-chart" class="chart-area"></div>
       </section>
 
-      <!-- ═══ Events Panel ═══ -->
+      <!-- ═══ Events Panel (split: filters left, stream right) ═══ -->
       <section id="panel-events" class="panel">
-        <div class="panel-header">
-          <h2>Live Event Stream</h2>
-          <div>
-            <label><input type="checkbox" id="events-auto-scroll" checked /> Auto-scroll</label>
-            <button id="events-clear" class="btn btn-small">Clear</button>
+        <div class="panel-split">
+          <div class="panel-sidebar panel-sidebar-narrow">
+            <div class="panel-sidebar-header">
+              <h3>Filters</h3>
+            </div>
+            <div class="sidebar-list" id="events-filters">
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="tool" checked /><span class="filter-swatch filter-swatch-tool"></span>Tool</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="llm" checked /><span class="filter-swatch filter-swatch-llm"></span>LLM</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="agent" checked /><span class="filter-swatch filter-swatch-agent"></span>Agent</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="state" checked /><span class="filter-swatch filter-swatch-state"></span>State</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="feedback" checked /><span class="filter-swatch filter-swatch-feedback"></span>Feedback</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="error" checked /><span class="filter-swatch filter-swatch-error"></span>Error</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="other" checked /><span class="filter-swatch filter-swatch-other"></span>Other</label>
+            </div>
+            <div class="panel-sidebar-footer">
+              <label class="filter-checkbox"><input type="checkbox" id="events-auto-scroll" checked />Auto-scroll</label>
+              <button id="events-clear" class="btn btn-small" style="width:100%;margin-top:6px;">Clear</button>
+            </div>
+          </div>
+          <div class="panel-main" style="padding:0;display:flex;flex-direction:column;">
+            <div class="panel-header" style="padding:12px 16px;margin-bottom:0;">
+              <h2>Live Event Stream</h2>
+            </div>
+            <div id="events-stream" class="log-area" style="border-radius:0;border-left:none;border-right:none;flex:1;"></div>
           </div>
         </div>
-        <div id="events-stream" class="log-area"></div>
       </section>
 
-      <!-- ═══ Sessions Panel (split: list left, detail right) ═══ -->
-      <section id="panel-sessions" class="panel">
-        <div class="panel-split">
-          <div class="panel-sidebar">
-            <div class="panel-sidebar-header">
-              <h3>Sessions</h3>
-              <button id="sessions-refresh" class="btn btn-small">Refresh</button>
-            </div>
-            <div id="sessions-list" class="sidebar-list"></div>
-          </div>
-          <div class="panel-main">
-            <div id="session-detail" class="session-detail">
-              <div class="empty-state"><div class="empty-state-icon">H</div>Select a session to view details</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- ═══ System Prompt / Soul Panel ═══ -->
       <section id="panel-soul" class="panel">
@@ -206,6 +248,17 @@
           <span id="settings-status" class="settings-status"></span>
         </div>
         <div class="settings-form">
+
+          <div class="settings-section">
+            <h3>Appearance</h3>
+            <div class="settings-field">
+              <label class="settings-label" for="settings-theme">Theme</label>
+              <div class="theme-switcher">
+                <button id="theme-light" class="btn btn-small theme-btn" data-theme="light">Light</button>
+                <button id="theme-dark" class="btn btn-small theme-btn theme-btn-active" data-theme="dark">Dark</button>
+              </div>
+            </div>
+          </div>
 
           <div class="settings-section">
             <h3>API Keys</h3>

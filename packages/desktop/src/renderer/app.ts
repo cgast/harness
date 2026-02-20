@@ -18,6 +18,13 @@ const state = {
   toolLog: [] as { time: string; name: string; success: boolean; duration: number; output: string }[],
   selectedSessionId: null as string | null,
   selectedSoulFile: null as string | null,
+  selectedToolName: null as string | null,
+  selectedSkillId: null as string | null,
+  selectedPluginId: null as string | null,
+  theme: (localStorage.getItem("harness-theme") || "dark") as "dark" | "light",
+  toolsData: [] as any[],
+  skillsData: [] as any[],
+  pluginsData: [] as any[],
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -32,7 +39,7 @@ const statusBadge = $("#status-badge");
 const modelLabel = $("#model-label");
 const tokenLabel = $("#token-label");
 
-// Chat
+// Chat (merged with sessions)
 const chatMessages = $("#chat-messages");
 const chatForm = $("#chat-form") as HTMLFormElement;
 const chatInput = $("#chat-input") as HTMLTextAreaElement;
@@ -41,16 +48,20 @@ const providerSelect = $("#provider-select") as HTMLSelectElement;
 const modelInput = $("#model-input") as HTMLInputElement;
 const feedbackBar = $("#feedback-bar");
 const feedbackContent = $("#feedback-content");
+const sessionsList = $("#sessions-list");
 
 // Tools
 const toolsList = $("#tools-list");
 const toolsLog = $("#tools-log");
+const toolDefinition = $("#tool-definition");
 
 // Skills
 const skillsList = $("#skills-list");
+const skillDetail = $("#skill-detail");
 
 // Plugins
 const pluginsList = $("#plugins-list");
+const pluginDetail = $("#plugin-detail");
 
 // Telemetry
 const telemetryStats = $("#telemetry-stats");
@@ -59,10 +70,6 @@ const telemetryChart = $("#telemetry-chart");
 // Events
 const eventsStream = $("#events-stream");
 const eventsAutoScroll = $("#events-auto-scroll") as HTMLInputElement;
-
-// Sessions
-const sessionsList = $("#sessions-list");
-const sessionDetail = $("#session-detail");
 
 // Soul
 const soulList = $("#soul-list");
@@ -97,11 +104,11 @@ function switchToPanel(panelId: string): void {
 
 function refreshPanel(panelId: string): void {
   switch (panelId) {
+    case "chat": refreshSessions(); break;
     case "tools": refreshTools(); break;
     case "skills": refreshSkills(); break;
     case "plugins": refreshPlugins(); break;
     case "telemetry": refreshTelemetry(); break;
-    case "sessions": refreshSessions(); break;
     case "settings": refreshSettings(); break;
     case "soul": refreshSoulFiles(); break;
   }
@@ -179,7 +186,7 @@ function updateRunningState(): void {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Tools Panel
+// Tools Panel (sidebar list + Definition / Execution Log)
 // ═══════════════════════════════════════════════════════════
 
 async function refreshTools(): Promise<void> {
@@ -188,44 +195,67 @@ async function refreshTools(): Promise<void> {
 
   toolsList.innerHTML = "";
   const tools: any[] = result.data;
+  state.toolsData = tools;
 
   if (tools.length === 0) {
-    toolsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">T</div>No tools registered</div>';
+    toolsList.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">No tools registered</div>';
     return;
   }
 
   for (const tool of tools) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <div class="card-title">${esc(tool.name)}</div>
+    const item = document.createElement("div");
+    item.className = `sidebar-item${state.selectedToolName === tool.name ? " active" : ""}`;
+    item.innerHTML = `
+      <span class="sidebar-item-title">${esc(tool.name)}</span>
+      ${tool.requiresConfirmation ? '<span class="sidebar-item-meta">confirm</span>' : ""}
+    `;
+    item.addEventListener("click", () => {
+      toolsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
+      item.classList.add("active");
+      state.selectedToolName = tool.name;
+      showToolDefinition(tool);
+    });
+    toolsList.appendChild(item);
+  }
+
+  // If a tool was previously selected, re-show it
+  if (state.selectedToolName) {
+    const found = tools.find((t) => t.name === state.selectedToolName);
+    if (found) showToolDefinition(found);
+  }
+}
+
+function showToolDefinition(tool: any): void {
+  toolDefinition.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <div class="card-title" style="font-size:16px;margin-bottom:8px;">${esc(tool.name)}</div>
       <div class="card-desc">${esc(tool.description)}</div>
-      <div class="card-meta">
+      <div class="card-meta" style="margin-top:6px;">
         ${tool.timeout ? `timeout: ${tool.timeout}ms` : ""}
         ${tool.requiresConfirmation ? '<span class="card-tag">confirmation required</span>' : ""}
       </div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Parameters</label>
       <div class="json-viewer">${esc(JSON.stringify(tool.parameters, null, 2))}</div>
-      <div class="card-actions">
-        <button class="btn btn-small btn-danger" data-tool-remove="${esc(tool.name)}">Remove</button>
-      </div>
-    `;
-    toolsList.appendChild(card);
-  }
+    </div>
+    <div class="card-actions">
+      <button class="btn btn-small btn-danger" id="tool-remove-btn">Remove</button>
+    </div>
+  `;
 
-  // Bind remove buttons
-  toolsList.querySelectorAll("[data-tool-remove]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const name = (btn as HTMLElement).dataset.toolRemove!;
-      await window.harness.unregisterTool(name);
-      refreshTools();
-    });
+  $("#tool-remove-btn")?.addEventListener("click", async () => {
+    await window.harness.unregisterTool(tool.name);
+    state.selectedToolName = null;
+    toolDefinition.innerHTML = '<div class="empty-state"><div class="empty-state-icon">T</div>Select a tool to view its definition</div>';
+    refreshTools();
   });
 }
 
 $("#tools-refresh")?.addEventListener("click", refreshTools);
 
 // ═══════════════════════════════════════════════════════════
-// Skills Panel
+// Skills Panel (sidebar list + detail)
 // ═══════════════════════════════════════════════════════════
 
 async function refreshSkills(): Promise<void> {
@@ -234,56 +264,80 @@ async function refreshSkills(): Promise<void> {
 
   skillsList.innerHTML = "";
   const skills: any[] = result.data;
+  state.skillsData = skills;
 
   if (skills.length === 0) {
-    skillsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">S</div>No skills loaded</div>';
+    skillsList.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">No skills loaded</div>';
     return;
   }
 
   for (const skill of skills) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <div class="card-title">
+    const item = document.createElement("div");
+    item.className = `sidebar-item${state.selectedSkillId === skill.id ? " active" : ""}`;
+    item.innerHTML = `
+      <span class="sidebar-item-title">${esc(skill.name)}</span>
+      ${skill.active
+        ? '<span class="sidebar-item-meta" style="color:var(--success);">on</span>'
+        : '<span class="sidebar-item-meta">off</span>'}
+    `;
+    item.addEventListener("click", () => {
+      skillsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
+      item.classList.add("active");
+      state.selectedSkillId = skill.id;
+      showSkillDetail(skill);
+    });
+    skillsList.appendChild(item);
+  }
+
+  // If a skill was previously selected, re-show it
+  if (state.selectedSkillId) {
+    const found = skills.find((s) => s.id === state.selectedSkillId);
+    if (found) showSkillDetail(found);
+  }
+}
+
+function showSkillDetail(skill: any): void {
+  skillDetail.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <div class="card-title" style="font-size:16px;margin-bottom:8px;">
         ${esc(skill.name)}
         ${skill.active ? '<span class="card-tag card-tag-active">active</span>' : '<span class="card-tag">inactive</span>'}
         ${skill.auto ? '<span class="card-tag card-tag-auto">auto</span>' : ""}
       </div>
       <div class="card-desc">${esc(skill.description)}</div>
-      <div class="card-meta">
+      <div class="card-meta" style="margin-top:6px;">
         v${skill.version} | id: ${esc(skill.id)}
-        ${skill.keywords.length > 0 ? ` | keywords: ${skill.keywords.map(esc).join(", ")}` : ""}
+        ${skill.keywords && skill.keywords.length > 0 ? ` | keywords: ${skill.keywords.map(esc).join(", ")}` : ""}
       </div>
-      ${skill.promptInjection ? `<div class="json-viewer">${esc(skill.promptInjection)}</div>` : ""}
-      <div class="card-actions">
-        ${skill.active
-          ? `<button class="btn btn-small btn-danger" data-skill-deactivate="${esc(skill.id)}">Deactivate</button>`
-          : `<button class="btn btn-small" data-skill-activate="${esc(skill.id)}">Activate</button>`
-        }
+    </div>
+    ${skill.promptInjection ? `
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Prompt Injection</label>
+        <div class="json-viewer">${esc(skill.promptInjection)}</div>
       </div>
-    `;
-    skillsList.appendChild(card);
-  }
+    ` : ""}
+    <div class="card-actions">
+      ${skill.active
+        ? '<button class="btn btn-small btn-danger" id="skill-toggle-btn">Deactivate</button>'
+        : '<button class="btn btn-small" id="skill-toggle-btn">Activate</button>'
+      }
+    </div>
+  `;
 
-  // Bind buttons
-  skillsList.querySelectorAll("[data-skill-activate]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      await window.harness.activateSkill((btn as HTMLElement).dataset.skillActivate!);
-      refreshSkills();
-    });
-  });
-  skillsList.querySelectorAll("[data-skill-deactivate]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      await window.harness.deactivateSkill((btn as HTMLElement).dataset.skillDeactivate!);
-      refreshSkills();
-    });
+  $("#skill-toggle-btn")?.addEventListener("click", async () => {
+    if (skill.active) {
+      await window.harness.deactivateSkill(skill.id);
+    } else {
+      await window.harness.activateSkill(skill.id);
+    }
+    refreshSkills();
   });
 }
 
 $("#skills-refresh")?.addEventListener("click", refreshSkills);
 
 // ═══════════════════════════════════════════════════════════
-// Plugins Panel
+// Plugins Panel (sidebar list + detail)
 // ═══════════════════════════════════════════════════════════
 
 async function refreshPlugins(): Promise<void> {
@@ -292,21 +346,56 @@ async function refreshPlugins(): Promise<void> {
 
   pluginsList.innerHTML = "";
   const plugins: any[] = result.data;
+  state.pluginsData = plugins;
 
   if (plugins.length === 0) {
-    pluginsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">P</div>No plugins loaded</div>';
+    pluginsList.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">No plugins loaded</div>';
     return;
   }
 
   for (const plugin of plugins) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <div class="card-title">${esc(plugin.name)}</div>
-      <div class="card-meta">id: ${esc(plugin.id)} | v${esc(plugin.version)}</div>
+    const item = document.createElement("div");
+    item.className = `sidebar-item${state.selectedPluginId === plugin.id ? " active" : ""}`;
+    item.innerHTML = `
+      <span class="sidebar-item-title">${esc(plugin.name)}</span>
+      <span class="sidebar-item-meta">v${esc(plugin.version)}</span>
     `;
-    pluginsList.appendChild(card);
+    item.addEventListener("click", () => {
+      pluginsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
+      item.classList.add("active");
+      state.selectedPluginId = plugin.id;
+      showPluginDetail(plugin);
+    });
+    pluginsList.appendChild(item);
   }
+
+  // If a plugin was previously selected, re-show it
+  if (state.selectedPluginId) {
+    const found = plugins.find((p) => p.id === state.selectedPluginId);
+    if (found) showPluginDetail(found);
+  }
+}
+
+function showPluginDetail(plugin: any): void {
+  pluginDetail.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <div class="card-title" style="font-size:16px;margin-bottom:8px;">${esc(plugin.name)}</div>
+      <div class="card-meta" style="margin-top:6px;">id: ${esc(plugin.id)} | v${esc(plugin.version)}</div>
+    </div>
+    ${plugin.description ? `<div class="card-desc" style="margin-bottom:12px;">${esc(plugin.description)}</div>` : ""}
+    ${plugin.tools && plugin.tools.length > 0 ? `
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Provided Tools</label>
+        <div class="json-viewer">${plugin.tools.map((t: any) => esc(typeof t === "string" ? t : t.name)).join(", ")}</div>
+      </div>
+    ` : ""}
+    ${plugin.hooks ? `
+      <div>
+        <label style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Hooks</label>
+        <div class="json-viewer">${esc(JSON.stringify(plugin.hooks, null, 2))}</div>
+      </div>
+    ` : ""}
+  `;
 }
 
 $("#plugins-refresh")?.addEventListener("click", refreshPlugins);
@@ -398,26 +487,50 @@ function renderTokenChart(): void {
 $("#telemetry-refresh")?.addEventListener("click", refreshTelemetry);
 
 // ═══════════════════════════════════════════════════════════
-// Events Panel
+// Events Panel (with filter sidebar)
 // ═══════════════════════════════════════════════════════════
+
+function getEventCategory(event: string): string {
+  if (event.startsWith("tool:")) return "tool";
+  if (event.startsWith("llm:")) return "llm";
+  if (event.startsWith("agent:")) return "agent";
+  if (event.includes("error")) return "error";
+  if (event.startsWith("state:")) return "state";
+  if (event.startsWith("feedback:")) return "feedback";
+  return "other";
+}
+
+function isEventFilterEnabled(category: string): boolean {
+  const checkbox = document.querySelector(`[data-event-filter="${category}"]`) as HTMLInputElement | null;
+  return checkbox ? checkbox.checked : true;
+}
 
 function appendEventLog(event: string, data: unknown): void {
   const time = new Date().toLocaleTimeString();
   const dataStr = typeof data === "string" ? data : JSON.stringify(data, null, 0);
   const truncated = dataStr && dataStr.length > 300 ? dataStr.slice(0, 300) + "..." : dataStr;
 
+  const category = getEventCategory(event);
+
   // Determine event color class
   let colorClass = "";
-  if (event.startsWith("tool:")) colorClass = "log-event-tool";
-  else if (event.startsWith("llm:")) colorClass = "log-event-llm";
-  else if (event.startsWith("agent:")) colorClass = "log-event-agent";
-  else if (event.includes("error")) colorClass = "log-event-error";
-  else if (event.startsWith("state:")) colorClass = "log-event-state";
-  else if (event.startsWith("feedback:")) colorClass = "log-event-feedback";
+  if (category === "tool") colorClass = "log-event-tool";
+  else if (category === "llm") colorClass = "log-event-llm";
+  else if (category === "agent") colorClass = "log-event-agent";
+  else if (category === "error") colorClass = "log-event-error";
+  else if (category === "state") colorClass = "log-event-state";
+  else if (category === "feedback") colorClass = "log-event-feedback";
 
   const entry = document.createElement("div");
   entry.className = "log-entry";
+  entry.dataset.eventCategory = category;
   entry.innerHTML = `<span class="log-time">${esc(time)}</span><span class="log-event ${colorClass}">${esc(event)}</span><span class="log-data">${esc(truncated || "")}</span>`;
+
+  // Apply current filter visibility
+  if (!isEventFilterEnabled(category)) {
+    entry.style.display = "none";
+  }
+
   eventsStream.appendChild(entry);
 
   if (eventsAutoScroll.checked) {
@@ -430,12 +543,23 @@ function appendEventLog(event: string, data: unknown): void {
   }
 }
 
+// Bind filter checkboxes
+document.querySelectorAll("[data-event-filter]").forEach((checkbox) => {
+  checkbox.addEventListener("change", () => {
+    const category = (checkbox as HTMLElement).dataset.eventFilter!;
+    const checked = (checkbox as HTMLInputElement).checked;
+    eventsStream.querySelectorAll(`[data-event-category="${category}"]`).forEach((entry) => {
+      (entry as HTMLElement).style.display = checked ? "" : "none";
+    });
+  });
+});
+
 $("#events-clear")?.addEventListener("click", () => {
   eventsStream.innerHTML = "";
 });
 
 // ═══════════════════════════════════════════════════════════
-// Sessions Panel (split view)
+// Unified Chat + Sessions Panel
 // ═══════════════════════════════════════════════════════════
 
 async function refreshSessions(): Promise<void> {
@@ -446,7 +570,7 @@ async function refreshSessions(): Promise<void> {
   const sessions: any[] = result.data;
 
   if (sessions.length === 0) {
-    sessionsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">H</div>No sessions yet</div>';
+    sessionsList.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">No sessions yet</div>';
     return;
   }
 
@@ -458,32 +582,24 @@ async function refreshSessions(): Promise<void> {
       <span class="sidebar-item-meta">${esc(s.id.slice(0, 6))}</span>
     `;
     item.addEventListener("click", () => {
-      // Update selection
       sessionsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
       item.classList.add("active");
       state.selectedSessionId = s.id;
-      showSessionDetail(s.id);
+      loadSessionMessages(s.id);
     });
     sessionsList.appendChild(item);
   }
 }
 
-async function showSessionDetail(id: string): Promise<void> {
+async function loadSessionMessages(id: string): Promise<void> {
   const result = await window.harness.getSession(id);
   if (!result.ok || !result.data) return;
 
   const s = result.data;
 
-  let messagesHtml = "";
-  try {
-    const messages = JSON.parse(s.messages || "[]");
-    messagesHtml = messages
-      .map((m: any) => `<div class="chat-msg chat-msg-${esc(m.role)}" style="max-width:100%"><span class="chat-msg-label">${esc(m.role)}${m.name ? ` (${esc(m.name)})` : ""}</span>${esc(m.content)}</div>`)
-      .join("");
-  } catch {
-    messagesHtml = "<div class='text-muted'>Unable to parse messages</div>";
-  }
+  chatMessages.innerHTML = "";
 
+  // Show session header
   let tokenHtml = "";
   try {
     const usage = JSON.parse(s.tokenUsage || "{}");
@@ -492,16 +608,44 @@ async function showSessionDetail(id: string): Promise<void> {
     tokenHtml = "--";
   }
 
-  sessionDetail.innerHTML = `
-    <div class="session-detail-header">
-      <h3>Session: ${esc(id.slice(0, 12))}...</h3>
-      <div class="card-meta">
-        Task: ${esc(s.task)} | Soul: ${esc(s.soulId || "none")} | Tokens: ${tokenHtml} | Created: ${esc(s.createdAt)} | Ended: ${esc(s.endedAt || "ongoing")}
-      </div>
+  const header = document.createElement("div");
+  header.className = "session-detail-header";
+  header.style.padding = "12px 0";
+  header.innerHTML = `
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:4px;">Session: ${esc(id.slice(0, 12))}...</h3>
+    <div class="card-meta">
+      Task: ${esc(s.task)} | Soul: ${esc(s.soulId || "none")} | Tokens: ${tokenHtml} | Created: ${esc(s.createdAt)} | Ended: ${esc(s.endedAt || "ongoing")}
     </div>
-    <div class="session-detail-messages">${messagesHtml}</div>
   `;
+  chatMessages.appendChild(header);
+
+  // Render messages
+  try {
+    const messages = JSON.parse(s.messages || "[]");
+    for (const m of messages) {
+      appendChatMessage(m.role, m.content, m.name);
+    }
+  } catch {
+    const err = document.createElement("div");
+    err.className = "text-muted";
+    err.textContent = "Unable to parse session messages";
+    chatMessages.appendChild(err);
+  }
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
+// New session button
+$("#new-session-btn")?.addEventListener("click", () => {
+  // Deselect current session
+  sessionsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
+  state.selectedSessionId = null;
+  chatMessages.innerHTML = "";
+  state.tokenHistory = [];
+  state.eventLog = [];
+  state.toolLog = [];
+  chatInput.focus();
+});
 
 $("#sessions-refresh")?.addEventListener("click", refreshSessions);
 
@@ -904,6 +1048,37 @@ settingsSaveBtn.addEventListener("click", async () => {
   }, 3000);
 });
 
+// ═══════════════════════════════════════════════════════════
+// Theme Switcher
+// ═══════════════════════════════════════════════════════════
+
+function applyTheme(theme: "dark" | "light"): void {
+  document.documentElement.setAttribute("data-theme", theme);
+  state.theme = theme;
+  localStorage.setItem("harness-theme", theme);
+
+  // Update button active states
+  document.querySelectorAll(".theme-btn").forEach((btn) => {
+    const btnTheme = (btn as HTMLElement).dataset.theme;
+    if (btnTheme === theme) {
+      btn.classList.add("theme-btn-active");
+    } else {
+      btn.classList.remove("theme-btn-active");
+    }
+  });
+}
+
+// Apply saved theme on load
+applyTheme(state.theme);
+
+// Bind theme buttons
+document.querySelectorAll(".theme-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const theme = (btn as HTMLElement).dataset.theme as "dark" | "light";
+    applyTheme(theme);
+  });
+});
+
 // Show/hide toggle for API key inputs
 $$(".settings-toggle-vis").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -927,6 +1102,8 @@ $$(".settings-toggle-vis").forEach((btn) => {
 // ═══════════════════════════════════════════════════════════
 
 window.harness.onMenuAction("new-session", () => {
+  sessionsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
+  state.selectedSessionId = null;
   chatMessages.innerHTML = "";
   state.tokenHistory = [];
   state.eventLog = [];
@@ -975,6 +1152,7 @@ async function init(): Promise<void> {
   refreshTools();
   refreshSkills();
   refreshPlugins();
+  refreshSessions();
 
   chatInput.focus();
 }
