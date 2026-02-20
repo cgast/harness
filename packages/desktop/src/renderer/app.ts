@@ -1102,6 +1102,7 @@ $$(".settings-toggle-vis").forEach((btn) => {
 // ═══════════════════════════════════════════════════════════
 
 window.harness.onMenuAction("new-session", () => {
+  switchToPanel("chat");
   sessionsList.querySelectorAll(".sidebar-item").forEach((el) => el.classList.remove("active"));
   state.selectedSessionId = null;
   chatMessages.innerHTML = "";
