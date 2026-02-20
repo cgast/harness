@@ -6,10 +6,10 @@ dist/
 bundle/
 release/
 
-# Electron / Desktop (not needed for server image)
+# Electron / Desktop (not needed for server or webclient images)
 packages/desktop/
 
-# CLI (not needed for server image)
+# CLI (not needed for server or webclient images)
 packages/cli/
 
 # Development files
@@ -32,6 +32,8 @@ logs/
 *.swo
 
 # Docker files themselves
-Dockerfile
 docker-compose*.yml
 .dockerignore
+
+# Plan file
+PLAN.md

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Harness Web</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Activity Bar + Content -->
+  <div id="workbench">
+
+    <!-- Activity Bar (left icon column) -->
+    <nav id="activity-bar">
+      <div class="activity-bar-top">
+        <button class="activity-btn active" data-panel="chat" title="Chat">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="tools" title="Tools">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="skills" title="Skills">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="plugins" title="Plugins">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="soul" title="System Prompt / Soul">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </button>
+      </div>
+      <div class="activity-bar-bottom">
+        <button class="activity-btn" data-panel="events" title="Events">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="telemetry" title="Telemetry">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="settings" title="Settings">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Content Area (panels) -->
+    <div id="content-area">
+
+      <!-- Chat Panel (merged with sessions: list left, chat right) -->
+      <section id="panel-chat" class="panel active">
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Sessions</h3>
+              <button id="sessions-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="sessions-list" class="sidebar-list"></div>
+            <div class="panel-sidebar-footer">
+              <button id="new-session-btn" class="btn btn-small btn-primary" style="width:100%">New Session</button>
+            </div>
+          </div>
+          <div class="panel-main" style="padding:0;display:flex;flex-direction:column;">
+            <div id="chat-messages" class="chat-messages"></div>
+            <div id="feedback-bar" class="feedback-bar hidden">
+              <div id="feedback-content"></div>
+            </div>
+            <form id="chat-form" class="chat-input-area">
+              <textarea id="chat-input" placeholder="Enter a task for the agent..." rows="2"></textarea>
+              <div class="chat-input-controls">
+                <select id="provider-select">
+                  <option value="anthropic">Anthropic</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="ollama">Ollama</option>
+                </select>
+                <input id="model-input" type="text" placeholder="model (optional)" />
+                <button type="submit" id="run-btn" class="btn btn-primary">Run</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tools Panel (split: list left, definition+log right) -->
+      <section id="panel-tools" class="panel">
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Tools</h3>
+              <button id="tools-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="tools-list" class="sidebar-list"></div>
+          </div>
+          <div class="panel-main" style="padding:0;display:flex;flex-direction:column;">
+            <div id="tool-detail" class="detail-split">
+              <div class="detail-section detail-section-top">
+                <div class="detail-section-header"><h3>Definition</h3></div>
+                <div id="tool-definition" class="detail-section-body">
+                  <div class="empty-state"><div class="empty-state-icon">T</div>Select a tool to view its definition</div>
+                </div>
+              </div>
+              <div class="detail-divider"></div>
+              <div class="detail-section detail-section-bottom">
+                <div class="detail-section-header"><h3>Execution Log</h3></div>
+                <div id="tools-log" class="log-area" style="border-radius:0;border:none;flex:1;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Skills Panel (split: list left, detail right) -->
+      <section id="panel-skills" class="panel">
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Skills</h3>
+              <button id="skills-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="skills-list" class="sidebar-list"></div>
+          </div>
+          <div class="panel-main">
+            <div id="skill-detail">
+              <div class="empty-state"><div class="empty-state-icon">S</div>Select a skill to view details</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Plugins Panel (split: list left, detail right) -->
+      <section id="panel-plugins" class="panel">
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Plugins</h3>
+              <button id="plugins-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="plugins-list" class="sidebar-list"></div>
+          </div>
+          <div class="panel-main">
+            <div id="plugin-detail">
+              <div class="empty-state"><div class="empty-state-icon">P</div>Select a plugin to view details</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Telemetry Panel -->
+      <section id="panel-telemetry" class="panel">
+        <div class="panel-header">
+          <h2>Telemetry</h2>
+          <button id="telemetry-refresh" class="btn btn-small">Refresh</button>
+        </div>
+        <div id="telemetry-stats" class="stats-grid"></div>
+        <div class="panel-header" style="margin-top: 1rem;">
+          <h2>Token Usage Over Time</h2>
+        </div>
+        <div id="telemetry-chart" class="chart-area"></div>
+      </section>
+
+      <!-- Events Panel (split: filters left, stream right) -->
+      <section id="panel-events" class="panel">
+        <div class="panel-split">
+          <div class="panel-sidebar panel-sidebar-narrow">
+            <div class="panel-sidebar-header">
+              <h3>Filters</h3>
+            </div>
+            <div class="sidebar-list" id="events-filters">
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="tool" checked /><span class="filter-swatch filter-swatch-tool"></span>Tool</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="llm" checked /><span class="filter-swatch filter-swatch-llm"></span>LLM</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="agent" checked /><span class="filter-swatch filter-swatch-agent"></span>Agent</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="state" checked /><span class="filter-swatch filter-swatch-state"></span>State</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="feedback" checked /><span class="filter-swatch filter-swatch-feedback"></span>Feedback</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="error" checked /><span class="filter-swatch filter-swatch-error"></span>Error</label>
+              <label class="filter-checkbox"><input type="checkbox" data-event-filter="other" checked /><span class="filter-swatch filter-swatch-other"></span>Other</label>
+            </div>
+            <div class="panel-sidebar-footer">
+              <label class="filter-checkbox"><input type="checkbox" id="events-auto-scroll" checked />Auto-scroll</label>
+              <button id="events-clear" class="btn btn-small" style="width:100%;margin-top:6px;">Clear</button>
+            </div>
+          </div>
+          <div class="panel-main" style="padding:0;display:flex;flex-direction:column;">
+            <div class="panel-header" style="padding:12px 16px;margin-bottom:0;">
+              <h2>Live Event Stream</h2>
+            </div>
+            <div id="events-stream" class="log-area" style="border-radius:0;border-left:none;border-right:none;flex:1;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- System Prompt / Soul Panel -->
+      <section id="panel-soul" class="panel">
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Soul Files</h3>
+              <button id="soul-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="soul-list" class="sidebar-list"></div>
+            <div class="panel-sidebar-footer">
+              <button id="soul-new" class="btn btn-small btn-primary" style="width:100%">New Soul File</button>
+            </div>
+          </div>
+          <div class="panel-main">
+            <div id="soul-editor" class="soul-editor">
+              <div class="empty-state"><div class="empty-state-icon">S</div>Select or create a soul file</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings Panel -->
+      <section id="panel-settings" class="panel">
+        <div class="panel-header">
+          <h2>Settings</h2>
+          <span id="settings-status" class="settings-status"></span>
+        </div>
+        <div class="settings-form">
+
+          <div class="settings-section">
+            <h3>Appearance</h3>
+            <div class="settings-field">
+              <label class="settings-label" for="settings-theme">Theme</label>
+              <div class="theme-switcher">
+                <button id="theme-light" class="btn btn-small theme-btn" data-theme="light">Light</button>
+                <button id="theme-dark" class="btn btn-small theme-btn theme-btn-active" data-theme="dark">Dark</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>API Keys</h3>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-openai-key">OpenAI API Key</label>
+              <div class="settings-input-row">
+                <input id="settings-openai-key" type="password" class="settings-input" placeholder="sk-..." autocomplete="off" />
+                <button class="btn btn-small settings-toggle-vis" data-target="settings-openai-key">Show</button>
+              </div>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-openai-base-url">OpenAI Base URL <span class="text-muted">(optional)</span></label>
+              <input id="settings-openai-base-url" type="text" class="settings-input" placeholder="https://api.openai.com/v1" autocomplete="off" />
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-anthropic-key">Anthropic API Key</label>
+              <div class="settings-input-row">
+                <input id="settings-anthropic-key" type="password" class="settings-input" placeholder="sk-ant-..." autocomplete="off" />
+                <button class="btn btn-small settings-toggle-vis" data-target="settings-anthropic-key">Show</button>
+              </div>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-ollama-url">Ollama Base URL</label>
+              <input id="settings-ollama-url" type="text" class="settings-input" placeholder="http://localhost:11434" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Defaults</h3>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-default-provider">Default Provider</label>
+              <select id="settings-default-provider" class="settings-input">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="ollama">Ollama</option>
+              </select>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-default-model">Default Model</label>
+              <input id="settings-default-model" type="text" class="settings-input" placeholder="gpt-4o, claude-sonnet-4-5-20250929, llama3.2..." autocomplete="off" />
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-field">
+                <label class="settings-label" for="settings-temperature">Temperature</label>
+                <input id="settings-temperature" type="number" class="settings-input" min="0" max="2" step="0.1" placeholder="0.7" />
+              </div>
+              <div class="settings-field">
+                <label class="settings-label" for="settings-max-iterations">Max Iterations</label>
+                <input id="settings-max-iterations" type="number" class="settings-input" min="1" max="100" step="1" placeholder="25" />
+              </div>
+              <div class="settings-field">
+                <label class="settings-label" for="settings-max-tokens">Max Tokens</label>
+                <input id="settings-max-tokens" type="number" class="settings-input" min="1" max="100000" step="1" placeholder="4096" />
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-actions">
+            <button id="settings-save" class="btn btn-primary">Save Settings</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Status Bar (bottom) -->
+  <footer id="status-bar">
+    <div class="status-bar-left">
+      <span id="status-badge" class="status-item badge badge-idle">idle</span>
+    </div>
+    <div class="status-bar-right">
+      <span id="model-label" class="status-item meta-label">--</span>
+      <span class="status-separator">|</span>
+      <span id="token-label" class="status-item meta-label">0 tokens</span>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

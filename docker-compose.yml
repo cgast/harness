@@ -1,4 +1,4 @@
-# docker-compose.yml — Quick local deployment of Harness server
+# docker-compose.yml — Two-service deployment: agent backend + web client
 #
 # Usage:
 #   cp .env.example .env        # fill in your API keys
@@ -7,12 +7,19 @@
 # Or pass keys directly:
 #   ANTHROPIC_API_KEY=sk-ant-... docker compose up
 #
+# The web client is accessible at http://localhost:8080
+# The backend API is also directly accessible at http://localhost:3000
+#
 services:
+
+  # ── Agent Backend (REST + WebSocket server) ──────────────────────
   harness:
     build: .
     image: ghcr.io/cgast/harness:latest
     ports:
       - "${PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -36,6 +43,35 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=64M
+
+  # ── Web Client (nginx serving static assets + reverse proxy) ─────
+  webclient:
+    build:
+      context: .
+      dockerfile: Dockerfile.webclient
+    image: ghcr.io/cgast/harness-webclient:latest
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      - harness
+    restart: unless-stopped
+
+    # Nginx is lightweight, minimal resources needed
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 16M
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=16M
+      - /var/run:size=1M
+      - /tmp:size=8M
 
 volumes:
   harness-data:

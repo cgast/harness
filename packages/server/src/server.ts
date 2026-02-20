@@ -13,6 +13,7 @@ import * as http from "node:http";
 import { WebSocketServer } from "ws";
 import { createAgent, loadConfig } from "@harness/core";
 import { attachWebSocket } from "./ws.js";
+import { handleApiRoute } from "./api-routes.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
@@ -25,7 +26,7 @@ async function main() {
   const server = http.createServer(async (req, res) => {
     // CORS headers
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
     if (req.method === "OPTIONS") {
@@ -43,6 +44,11 @@ async function main() {
           connections: sessions.size,
         })
       );
+      return;
+    }
+
+    // Try extended API routes (tools, skills, sessions, etc.)
+    if (handleApiRoute(req, res, agent, config)) {
       return;
     }
 
