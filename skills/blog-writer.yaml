@@ -1,0 +1,38 @@
+id: blog-writer
+name: "Blog Writer"
+description: "Write well-structured blog posts in Markdown"
+version: 1
+
+activation:
+  keywords:
+    - "blog"
+    - "blog post"
+    - "article"
+    - "write a post"
+
+prompt_injection: |
+  You can write blog posts using the 'file_write' tool. Save them as Markdown (.md).
+
+  Follow this structure:
+  - **Title**: Clear, engaging, under 70 characters
+  - **Hook**: Opening paragraph that states the problem or draws the reader in
+  - **Body**: 3-5 sections with H2 headings, each covering one sub-topic
+  - **Conclusion**: Summarize key points and include a call to action
+  - **Metadata block** (YAML front matter):
+
+  ```
+  ---
+  title: "Your Title Here"
+  date: YYYY-MM-DD
+  tags: [tag1, tag2]
+  summary: "A one-sentence summary for previews and SEO."
+  ---
+  ```
+
+  Writing guidelines:
+  - Write in second person ("you") for engagement
+  - Keep paragraphs short (2-4 sentences)
+  - Use code blocks with language tags when showing code
+  - Include practical examples where possible
+  - Aim for 800-1500 words unless the user specifies a length
+  - Save the file as <slug>.md (lowercase, hyphens, no spaces)

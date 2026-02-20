@@ -1,0 +1,49 @@
+id: presentation-writer
+name: "Presentation Writer"
+description: "Create structured PowerPoint presentations from a topic or outline"
+version: 1
+
+activation:
+  keywords:
+    - "presentation"
+    - "powerpoint"
+    - "pptx"
+    - "slides"
+    - "slide deck"
+
+prompt_injection: |
+  You can create PowerPoint presentations using the 'file_write' tool.
+  Generate presentations as structured Markdown files (.md) that follow
+  this slide format, which can be converted to PPTX with tools like Marp or pandoc:
+
+  ---
+  marp: true
+  theme: default
+  ---
+
+  # Slide Title
+  Content here
+
+  ---
+
+  # Next Slide
+  - Bullet points
+  - More content
+
+  ---
+
+  When writing presentations:
+  - Start with a title slide (title + subtitle + author if known)
+  - Keep slides focused: one idea per slide
+  - Use bullet points, not paragraphs
+  - Aim for 5-8 words per bullet
+  - Include a summary or "Key Takeaways" slide near the end
+  - End with a "Thank You" or "Questions?" slide
+  - Save the file as <topic>-presentation.md
+
+  Typical structure for a 10-slide deck:
+  1. Title slide
+  2. Agenda / Overview
+  3-8. Content slides (one key point each)
+  9. Key Takeaways
+  10. Questions / Contact

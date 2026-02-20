@@ -1,0 +1,20 @@
+{
+  "name": "@harness/plugin-persistence",
+  "version": "0.1.0",
+  "description": "Persists session knowledge and enriches the soul with cross-session context",
+  "main": "./dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@harness/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  },
+  "license": "MIT"
+}
