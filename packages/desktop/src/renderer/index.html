@@ -8,197 +8,288 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Top bar -->
-  <header id="top-bar">
-    <div class="top-bar-left">
-      <span class="logo">HARNESS</span>
-      <span id="status-badge" class="badge badge-idle">idle</span>
-    </div>
-    <div class="top-bar-center">
-      <nav id="tab-nav">
-        <button class="tab active" data-panel="chat">Chat</button>
-        <button class="tab" data-panel="tools">Tools</button>
-        <button class="tab" data-panel="skills">Skills</button>
-        <button class="tab" data-panel="plugins">Plugins</button>
-        <button class="tab" data-panel="telemetry">Telemetry</button>
-        <button class="tab" data-panel="events">Events</button>
-        <button class="tab" data-panel="sessions">Sessions</button>
-        <button class="tab" data-panel="settings">Settings</button>
-      </nav>
-    </div>
-    <div class="top-bar-right">
-      <span id="model-label" class="meta-label">--</span>
-      <span id="token-label" class="meta-label">0 tokens</span>
-    </div>
+
+  <!-- ═══ Title Bar ═══ -->
+  <header id="title-bar">
+    <span class="logo">HARNESS</span>
   </header>
 
-  <!-- Main content area -->
-  <main id="main-content">
+  <!-- ═══ Middle: Activity Bar + Content ═══ -->
+  <div id="workbench">
 
-    <!-- ═══ Chat Panel ═══ -->
-    <section id="panel-chat" class="panel active">
-      <div id="chat-messages" class="chat-messages"></div>
-      <div id="feedback-bar" class="feedback-bar hidden">
-        <div id="feedback-content"></div>
+    <!-- ═══ Activity Bar (left icon column) ═══ -->
+    <nav id="activity-bar">
+      <div class="activity-bar-top">
+        <button class="activity-btn active" data-panel="chat" title="Chat">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="tools" title="Tools">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="skills" title="Skills">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="plugins" title="Plugins">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="events" title="Events">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="sessions" title="Sessions">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="soul" title="System Prompt / Soul">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </button>
       </div>
-      <form id="chat-form" class="chat-input-area">
-        <textarea id="chat-input" placeholder="Enter a task for the agent..." rows="2"></textarea>
-        <div class="chat-input-controls">
-          <select id="provider-select">
-            <option value="anthropic">Anthropic</option>
-            <option value="openai">OpenAI</option>
-            <option value="ollama">Ollama</option>
-          </select>
-          <input id="model-input" type="text" placeholder="model (optional)" />
-          <button type="submit" id="run-btn" class="btn btn-primary">Run</button>
+      <div class="activity-bar-bottom">
+        <button class="activity-btn" data-panel="telemetry" title="Telemetry">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </button>
+        <button class="activity-btn" data-panel="settings" title="Settings">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ═══ Content Area (panels) ═══ -->
+    <div id="content-area">
+
+      <!-- ═══ Chat Panel ═══ -->
+      <section id="panel-chat" class="panel active">
+        <div id="chat-messages" class="chat-messages"></div>
+        <div id="feedback-bar" class="feedback-bar hidden">
+          <div id="feedback-content"></div>
         </div>
-      </form>
-    </section>
-
-    <!-- ═══ Tools Panel ═══ -->
-    <section id="panel-tools" class="panel">
-      <div class="panel-header">
-        <h2>Registered Tools</h2>
-        <button id="tools-refresh" class="btn btn-small">Refresh</button>
-      </div>
-      <div id="tools-list" class="card-grid"></div>
-      <div class="panel-header" style="margin-top: 1rem;">
-        <h2>Tool Execution Log</h2>
-      </div>
-      <div id="tools-log" class="log-area"></div>
-    </section>
-
-    <!-- ═══ Skills Panel ═══ -->
-    <section id="panel-skills" class="panel">
-      <div class="panel-header">
-        <h2>Skills</h2>
-        <button id="skills-refresh" class="btn btn-small">Refresh</button>
-      </div>
-      <div id="skills-list" class="card-grid"></div>
-    </section>
-
-    <!-- ═══ Plugins Panel ═══ -->
-    <section id="panel-plugins" class="panel">
-      <div class="panel-header">
-        <h2>Loaded Plugins</h2>
-        <button id="plugins-refresh" class="btn btn-small">Refresh</button>
-      </div>
-      <div id="plugins-list" class="card-grid"></div>
-    </section>
-
-    <!-- ═══ Telemetry Panel ═══ -->
-    <section id="panel-telemetry" class="panel">
-      <div class="panel-header">
-        <h2>Telemetry</h2>
-        <button id="telemetry-refresh" class="btn btn-small">Refresh</button>
-      </div>
-      <div id="telemetry-stats" class="stats-grid"></div>
-      <div class="panel-header" style="margin-top: 1rem;">
-        <h2>Token Usage Over Time</h2>
-      </div>
-      <div id="telemetry-chart" class="chart-area"></div>
-    </section>
-
-    <!-- ═══ Events Panel ═══ -->
-    <section id="panel-events" class="panel">
-      <div class="panel-header">
-        <h2>Live Event Stream</h2>
-        <div>
-          <label><input type="checkbox" id="events-auto-scroll" checked /> Auto-scroll</label>
-          <button id="events-clear" class="btn btn-small">Clear</button>
-        </div>
-      </div>
-      <div id="events-stream" class="log-area"></div>
-    </section>
-
-    <!-- ═══ Sessions Panel ═══ -->
-    <section id="panel-sessions" class="panel">
-      <div class="panel-header">
-        <h2>Session History</h2>
-        <button id="sessions-refresh" class="btn btn-small">Refresh</button>
-      </div>
-      <div id="sessions-list" class="sessions-list"></div>
-      <div id="session-detail" class="session-detail hidden"></div>
-    </section>
-
-    <!-- ═══ Settings Panel ═══ -->
-    <section id="panel-settings" class="panel">
-      <div class="panel-header">
-        <h2>Settings</h2>
-        <span id="settings-status" class="settings-status"></span>
-      </div>
-      <div class="settings-form">
-
-        <div class="settings-section">
-          <h3>API Keys</h3>
-
-          <div class="settings-field">
-            <label class="settings-label" for="settings-openai-key">OpenAI API Key</label>
-            <div class="settings-input-row">
-              <input id="settings-openai-key" type="password" class="settings-input" placeholder="sk-..." autocomplete="off" />
-              <button class="btn btn-small settings-toggle-vis" data-target="settings-openai-key">Show</button>
-            </div>
-          </div>
-
-          <div class="settings-field">
-            <label class="settings-label" for="settings-openai-base-url">OpenAI Base URL <span class="text-muted">(optional)</span></label>
-            <input id="settings-openai-base-url" type="text" class="settings-input" placeholder="https://api.openai.com/v1" autocomplete="off" />
-          </div>
-
-          <div class="settings-field">
-            <label class="settings-label" for="settings-anthropic-key">Anthropic API Key</label>
-            <div class="settings-input-row">
-              <input id="settings-anthropic-key" type="password" class="settings-input" placeholder="sk-ant-..." autocomplete="off" />
-              <button class="btn btn-small settings-toggle-vis" data-target="settings-anthropic-key">Show</button>
-            </div>
-          </div>
-
-          <div class="settings-field">
-            <label class="settings-label" for="settings-ollama-url">Ollama Base URL</label>
-            <input id="settings-ollama-url" type="text" class="settings-input" placeholder="http://localhost:11434" autocomplete="off" />
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h3>Defaults</h3>
-
-          <div class="settings-field">
-            <label class="settings-label" for="settings-default-provider">Default Provider</label>
-            <select id="settings-default-provider" class="settings-input">
-              <option value="openai">OpenAI</option>
+        <form id="chat-form" class="chat-input-area">
+          <textarea id="chat-input" placeholder="Enter a task for the agent..." rows="2"></textarea>
+          <div class="chat-input-controls">
+            <select id="provider-select">
               <option value="anthropic">Anthropic</option>
+              <option value="openai">OpenAI</option>
               <option value="ollama">Ollama</option>
             </select>
+            <input id="model-input" type="text" placeholder="model (optional)" />
+            <button type="submit" id="run-btn" class="btn btn-primary">Run</button>
           </div>
+        </form>
+      </section>
 
-          <div class="settings-field">
-            <label class="settings-label" for="settings-default-model">Default Model</label>
-            <input id="settings-default-model" type="text" class="settings-input" placeholder="gpt-4o, claude-sonnet-4-5-20250929, llama3.2..." autocomplete="off" />
+      <!-- ═══ Tools Panel ═══ -->
+      <section id="panel-tools" class="panel">
+        <div class="panel-header">
+          <h2>Registered Tools</h2>
+          <button id="tools-refresh" class="btn btn-small">Refresh</button>
+        </div>
+        <div id="tools-list" class="card-grid"></div>
+        <div class="panel-header" style="margin-top: 1rem;">
+          <h2>Tool Execution Log</h2>
+        </div>
+        <div id="tools-log" class="log-area"></div>
+      </section>
+
+      <!-- ═══ Skills Panel ═══ -->
+      <section id="panel-skills" class="panel">
+        <div class="panel-header">
+          <h2>Skills</h2>
+          <button id="skills-refresh" class="btn btn-small">Refresh</button>
+        </div>
+        <div id="skills-list" class="card-grid"></div>
+      </section>
+
+      <!-- ═══ Plugins Panel ═══ -->
+      <section id="panel-plugins" class="panel">
+        <div class="panel-header">
+          <h2>Loaded Plugins</h2>
+          <button id="plugins-refresh" class="btn btn-small">Refresh</button>
+        </div>
+        <div id="plugins-list" class="card-grid"></div>
+      </section>
+
+      <!-- ═══ Telemetry Panel ═══ -->
+      <section id="panel-telemetry" class="panel">
+        <div class="panel-header">
+          <h2>Telemetry</h2>
+          <button id="telemetry-refresh" class="btn btn-small">Refresh</button>
+        </div>
+        <div id="telemetry-stats" class="stats-grid"></div>
+        <div class="panel-header" style="margin-top: 1rem;">
+          <h2>Token Usage Over Time</h2>
+        </div>
+        <div id="telemetry-chart" class="chart-area"></div>
+      </section>
+
+      <!-- ═══ Events Panel ═══ -->
+      <section id="panel-events" class="panel">
+        <div class="panel-header">
+          <h2>Live Event Stream</h2>
+          <div>
+            <label><input type="checkbox" id="events-auto-scroll" checked /> Auto-scroll</label>
+            <button id="events-clear" class="btn btn-small">Clear</button>
           </div>
+        </div>
+        <div id="events-stream" class="log-area"></div>
+      </section>
 
-          <div class="settings-row">
-            <div class="settings-field">
-              <label class="settings-label" for="settings-temperature">Temperature</label>
-              <input id="settings-temperature" type="number" class="settings-input" min="0" max="2" step="0.1" placeholder="0.7" />
+      <!-- ═══ Sessions Panel (split: list left, detail right) ═══ -->
+      <section id="panel-sessions" class="panel">
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Sessions</h3>
+              <button id="sessions-refresh" class="btn btn-small">Refresh</button>
             </div>
-            <div class="settings-field">
-              <label class="settings-label" for="settings-max-iterations">Max Iterations</label>
-              <input id="settings-max-iterations" type="number" class="settings-input" min="1" max="100" step="1" placeholder="25" />
-            </div>
-            <div class="settings-field">
-              <label class="settings-label" for="settings-max-tokens">Max Tokens</label>
-              <input id="settings-max-tokens" type="number" class="settings-input" min="1" max="100000" step="1" placeholder="4096" />
+            <div id="sessions-list" class="sidebar-list"></div>
+          </div>
+          <div class="panel-main">
+            <div id="session-detail" class="session-detail">
+              <div class="empty-state"><div class="empty-state-icon">H</div>Select a session to view details</div>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="settings-actions">
-          <button id="settings-save" class="btn btn-primary">Save Settings</button>
+      <!-- ═══ System Prompt / Soul Panel ═══ -->
+      <section id="panel-soul" class="panel">
+        <div class="panel-split">
+          <div class="panel-sidebar">
+            <div class="panel-sidebar-header">
+              <h3>Soul Files</h3>
+              <button id="soul-refresh" class="btn btn-small">Refresh</button>
+            </div>
+            <div id="soul-list" class="sidebar-list"></div>
+            <div class="panel-sidebar-footer">
+              <button id="soul-new" class="btn btn-small btn-primary" style="width:100%">New Soul File</button>
+            </div>
+          </div>
+          <div class="panel-main">
+            <div id="soul-editor" class="soul-editor">
+              <div class="empty-state"><div class="empty-state-icon">S</div>Select or create a soul file</div>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-  </main>
+      <!-- ═══ Settings Panel ═══ -->
+      <section id="panel-settings" class="panel">
+        <div class="panel-header">
+          <h2>Settings</h2>
+          <span id="settings-status" class="settings-status"></span>
+        </div>
+        <div class="settings-form">
+
+          <div class="settings-section">
+            <h3>API Keys</h3>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-openai-key">OpenAI API Key</label>
+              <div class="settings-input-row">
+                <input id="settings-openai-key" type="password" class="settings-input" placeholder="sk-..." autocomplete="off" />
+                <button class="btn btn-small settings-toggle-vis" data-target="settings-openai-key">Show</button>
+              </div>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-openai-base-url">OpenAI Base URL <span class="text-muted">(optional)</span></label>
+              <input id="settings-openai-base-url" type="text" class="settings-input" placeholder="https://api.openai.com/v1" autocomplete="off" />
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-anthropic-key">Anthropic API Key</label>
+              <div class="settings-input-row">
+                <input id="settings-anthropic-key" type="password" class="settings-input" placeholder="sk-ant-..." autocomplete="off" />
+                <button class="btn btn-small settings-toggle-vis" data-target="settings-anthropic-key">Show</button>
+              </div>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-ollama-url">Ollama Base URL</label>
+              <input id="settings-ollama-url" type="text" class="settings-input" placeholder="http://localhost:11434" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Defaults</h3>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-default-provider">Default Provider</label>
+              <select id="settings-default-provider" class="settings-input">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="ollama">Ollama</option>
+              </select>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-default-model">Default Model</label>
+              <input id="settings-default-model" type="text" class="settings-input" placeholder="gpt-4o, claude-sonnet-4-5-20250929, llama3.2..." autocomplete="off" />
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-field">
+                <label class="settings-label" for="settings-temperature">Temperature</label>
+                <input id="settings-temperature" type="number" class="settings-input" min="0" max="2" step="0.1" placeholder="0.7" />
+              </div>
+              <div class="settings-field">
+                <label class="settings-label" for="settings-max-iterations">Max Iterations</label>
+                <input id="settings-max-iterations" type="number" class="settings-input" min="1" max="100" step="1" placeholder="25" />
+              </div>
+              <div class="settings-field">
+                <label class="settings-label" for="settings-max-tokens">Max Tokens</label>
+                <input id="settings-max-tokens" type="number" class="settings-input" min="1" max="100000" step="1" placeholder="4096" />
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-actions">
+            <button id="settings-save" class="btn btn-primary">Save Settings</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ═══ Status Bar (bottom) ═══ -->
+  <footer id="status-bar">
+    <div class="status-bar-left">
+      <span id="status-badge" class="status-item badge badge-idle">idle</span>
+    </div>
+    <div class="status-bar-right">
+      <span id="model-label" class="status-item meta-label">--</span>
+      <span class="status-separator">|</span>
+      <span id="token-label" class="status-item meta-label">0 tokens</span>
+    </div>
+  </footer>
 
   <script src="app.js"></script>
 </body>

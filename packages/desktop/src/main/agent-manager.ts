@@ -11,6 +11,8 @@ import YAML from "yaml";
 import {
   createAgent,
   loadConfig,
+  loadSoul,
+  findSoul,
   EventBus,
   ToolRegistry,
   PluginLoader,
@@ -23,6 +25,7 @@ import {
   type AgentStateData,
   type ToolDefinition,
   type SkillDocument,
+  type SoulDocument,
   type SessionRecord,
   type EventLogRecord,
   type PersistenceStore,
@@ -447,6 +450,171 @@ export class AgentManager {
       if (settings.defaults.maxTokens !== undefined) merged.maxTokens = settings.defaults.maxTokens;
       this.agent.state.set("config", merged as AgentStateData["config"]);
     }
+  }
+
+  // ─── Soul Files (system prompts) ────────────────────────────
+
+  private getSoulsDir(): string {
+    const home = this.config.harnessHome ||
+      process.env.HARNESS_HOME ||
+      path.join(process.env.HOME || "~", ".harness");
+    return path.join(home, "souls");
+  }
+
+  getSoulFiles(): Array<{ name: string; active: boolean }> {
+    const soulsDir = this.getSoulsDir();
+    if (!fs.existsSync(soulsDir)) return [];
+
+    const activeSoul = this.agent?.state.get("activeSoul") || "";
+    const entries = fs.readdirSync(soulsDir);
+    const results: Array<{ name: string; active: boolean }> = [];
+
+    for (const entry of entries) {
+      if (!entry.endsWith(".yaml") && !entry.endsWith(".yml")) continue;
+      const name = entry.replace(/\.(yaml|yml)$/, "");
+      results.push({
+        name,
+        active: name === activeSoul || entry === activeSoul,
+      });
+    }
+
+    return results;
+  }
+
+  getSoulFile(name: string): {
+    name: string;
+    description: string;
+    modelHint: string;
+    systemPrompt: string;
+    active: boolean;
+  } | null {
+    const soulsDir = this.getSoulsDir();
+    const filePath = path.join(soulsDir, `${name}.yaml`);
+    const altPath = path.join(soulsDir, `${name}.yml`);
+    const resolvedPath = fs.existsSync(filePath) ? filePath : fs.existsSync(altPath) ? altPath : null;
+
+    if (!resolvedPath) return null;
+
+    try {
+      const soul = loadSoul(resolvedPath);
+      const activeSoul = this.agent?.state.get("activeSoul") || "";
+      return {
+        name: soul.name,
+        description: soul.layers?.context?.domain || "",
+        modelHint: "",
+        systemPrompt: this.soulToPromptContent(soul),
+        active: soul.id === activeSoul,
+      };
+    } catch {
+      // Fallback: read raw YAML
+      const raw = fs.readFileSync(resolvedPath, "utf-8");
+      return {
+        name,
+        description: "",
+        modelHint: "",
+        systemPrompt: raw,
+        active: false,
+      };
+    }
+  }
+
+  saveSoulFile(name: string, data: {
+    name?: string;
+    description?: string;
+    modelHint?: string;
+    systemPrompt?: string;
+  }): void {
+    const soulsDir = this.getSoulsDir();
+    if (!fs.existsSync(soulsDir)) {
+      fs.mkdirSync(soulsDir, { recursive: true });
+    }
+
+    const filePath = path.join(soulsDir, `${name}.yaml`);
+
+    // Try to load existing soul to preserve structure
+    let soulData: Record<string, unknown> = {
+      id: name,
+      name: data.name || name,
+      version: 1,
+      layers: {
+        context: {
+          domain: data.description || "General-purpose assistance",
+          special_instructions: [],
+        },
+        character: {
+          traits: ["Helpful and thorough"],
+          style: {
+            verbosity: "concise",
+            tone: "professional",
+          },
+        },
+      },
+    };
+
+    if (fs.existsSync(filePath)) {
+      try {
+        const raw = fs.readFileSync(filePath, "utf-8");
+        soulData = YAML.parse(raw) || soulData;
+      } catch {
+        // Use defaults
+      }
+    }
+
+    // Apply updates
+    if (data.name) soulData.name = data.name;
+    if (data.description) {
+      const layers = (soulData.layers || {}) as Record<string, unknown>;
+      const ctx = (layers.context || {}) as Record<string, unknown>;
+      ctx.domain = data.description;
+      layers.context = ctx;
+      soulData.layers = layers;
+    }
+
+    // If systemPrompt is provided as raw YAML content, try to parse it
+    if (data.systemPrompt) {
+      try {
+        const parsed = YAML.parse(data.systemPrompt);
+        if (parsed && typeof parsed === "object" && parsed.id && parsed.layers) {
+          soulData = parsed;
+        }
+      } catch {
+        // Not valid YAML structure - store as special_instructions
+        const layers = (soulData.layers || {}) as Record<string, unknown>;
+        const ctx = (layers.context || {}) as Record<string, unknown>;
+        ctx.special_instructions = data.systemPrompt.split("\n").filter((l: string) => l.trim());
+        layers.context = ctx;
+        soulData.layers = layers;
+      }
+    }
+
+    fs.writeFileSync(filePath, YAML.stringify(soulData), "utf-8");
+  }
+
+  deleteSoulFile(name: string): void {
+    const soulsDir = this.getSoulsDir();
+    const filePath = path.join(soulsDir, `${name}.yaml`);
+    const altPath = path.join(soulsDir, `${name}.yml`);
+
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    else if (fs.existsSync(altPath)) fs.unlinkSync(altPath);
+  }
+
+  setActiveSoul(name: string): void {
+    if (!this.agent) throw new Error("Agent not initialized");
+    const oldValue = this.agent.state.get("activeSoul");
+    this.agent.state.set("activeSoul", name);
+    this.agent.bus.emit("state:change", { path: "activeSoul", oldValue, newValue: name });
+  }
+
+  private soulToPromptContent(soul: SoulDocument): string {
+    // Reconstruct YAML from the soul document for editing
+    const doc: Record<string, unknown> = {
+      id: soul.id,
+      name: soul.name,
+      version: soul.version,
+      layers: soul.layers,
+    };
+    return YAML.stringify(doc);
   }
 
   // ─── Lifecycle ─────────────────────────────────────────────

@@ -17,6 +17,14 @@ interface RunTaskOptions {
   maxIterations?: number;
 }
 
+interface SoulFileData {
+  name: string;
+  description?: string;
+  modelHint?: string;
+  systemPrompt: string;
+  active?: boolean;
+}
+
 interface HarnessDesktopApi {
   // Task execution
   runTask(options: RunTaskOptions): Promise<IpcResult>;
@@ -58,6 +66,13 @@ interface HarnessDesktopApi {
 
   // Messages
   getMessages(): Promise<IpcResult<unknown[]>>;
+
+  // Soul files (system prompts)
+  getSoulFiles(): Promise<IpcResult<Array<{ name: string; active: boolean }>>>;
+  getSoulFile(name: string): Promise<IpcResult<SoulFileData>>;
+  saveSoulFile(name: string, data: Partial<SoulFileData>): Promise<IpcResult>;
+  deleteSoulFile(name: string): Promise<IpcResult>;
+  setActiveSoul(name: string): Promise<IpcResult>;
 
   // Events
   onEvent(callback: (payload: { event: string; data: unknown }) => void): void;

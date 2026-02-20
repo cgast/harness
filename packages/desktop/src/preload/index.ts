@@ -125,6 +125,28 @@ const harnessApi = {
   getMessages: (): Promise<IpcResult> =>
     ipcRenderer.invoke("harness:messages"),
 
+  // ─── Soul Files (system prompts) ─────────────────────────
+
+  /** List all soul files in the souls directory. */
+  getSoulFiles: (): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:soul-list"),
+
+  /** Read a specific soul file by name. */
+  getSoulFile: (name: string): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:soul-get", name),
+
+  /** Save (create or update) a soul file. */
+  saveSoulFile: (name: string, data: Record<string, unknown>): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:soul-save", name, data),
+
+  /** Delete a soul file. */
+  deleteSoulFile: (name: string): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:soul-delete", name),
+
+  /** Set the active soul for the agent. */
+  setActiveSoul: (name: string): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:soul-set-active", name),
+
   // ─── Events (push from main → renderer) ──────────────────
 
   /** Subscribe to all harness events pushed from the main process. */
