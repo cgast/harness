@@ -1,9 +1,11 @@
 name: Build Desktop
 
+# CI build — validates desktop builds on pushes and PRs.
+# For tagged releases, see release.yml instead.
+
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -51,13 +53,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      # Linux: libfuse2 is required for AppImage creation (removed from Ubuntu 22.04+)
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libfuse2
 
-      # Windows: node-gyp needs distutils for native module compilation;
-      # Python 3.12+ removed it from the stdlib, so install setuptools
       - name: Install Windows build dependencies
         if: runner.os == 'Windows'
         run: pip install setuptools
@@ -65,20 +64,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Build workspace packages that @harness/desktop depends on
       - name: Build core packages
         run: pnpm --filter @harness/core build
 
-      # Bundle the Electron app with esbuild and package with electron-builder
       - name: Build desktop (${{ matrix.platform }})
         run: pnpm --filter @harness/desktop dist:${{ matrix.platform }}
         env:
-          # Skip code signing in CI unless secrets are configured
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-          # Help node-gyp find MSVC on Windows for native module compilation
           npm_config_msvs_version: "2022"
 
-      # Upload platform-specific installers
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -90,26 +84,4 @@ jobs:
             packages/desktop/release/*.AppImage
             packages/desktop/release/*.deb
           if-no-files-found: error
-          retention-days: 30
-
-  # ── Release job: publishes artifacts when a tag is pushed ────
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          generate_release_notes: true
-          files: artifacts/*
+          retention-days: 14
