@@ -51,6 +51,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
+      # Linux: libfuse2 is required for AppImage creation (removed from Ubuntu 22.04+)
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libfuse2
+
+      # Windows: node-gyp needs distutils for native module compilation;
+      # Python 3.12+ removed it from the stdlib, so install setuptools
+      - name: Install Windows build dependencies
+        if: runner.os == 'Windows'
+        run: pip install setuptools
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -64,6 +75,8 @@ jobs:
         env:
           # Skip code signing in CI unless secrets are configured
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          # Help node-gyp find MSVC on Windows for native module compilation
+          npm_config_msvs_version: "2022"
 
       # Upload platform-specific installers
       - name: Upload artifacts
