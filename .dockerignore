@@ -1,0 +1,37 @@
+# Dependencies (will be installed in container)
+node_modules/
+
+# Build artifacts (will be built in container)
+dist/
+bundle/
+release/
+
+# Electron / Desktop (not needed for server image)
+packages/desktop/
+
+# CLI (not needed for server image)
+packages/cli/
+
+# Development files
+.git/
+.github/
+.env
+.env.*
+*.db
+*.db-journal
+coverage/
+logs/
+*.log
+.turbo/
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker files themselves
+Dockerfile
+docker-compose*.yml
+.dockerignore

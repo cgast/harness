@@ -1,0 +1,41 @@
+# docker-compose.yml — Quick local deployment of Harness server
+#
+# Usage:
+#   cp .env.example .env        # fill in your API keys
+#   docker compose up
+#
+# Or pass keys directly:
+#   ANTHROPIC_API_KEY=sk-ant-... docker compose up
+#
+services:
+  harness:
+    build: .
+    image: ghcr.io/cgast/harness:latest
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - PORT=3000
+    volumes:
+      # Persist SQLite database and configuration across restarts
+      - harness-data:/home/harness/.harness
+    restart: unless-stopped
+
+    # Resource limits for sandboxing
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+
+volumes:
+  harness-data:
