@@ -1,6 +1,6 @@
 {
   "name": "harness",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Universal LLM Agent Runtime",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@harness/plugin-template",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Starter template for building Harness plugins",
   "main": "./dist/index.js",
   "type": "commonjs",

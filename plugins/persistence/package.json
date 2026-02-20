@@ -1,6 +1,6 @@
 {
   "name": "@harness/plugin-persistence",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Persists session knowledge and enriches the soul with cross-session context",
   "main": "./dist/index.js",
   "type": "commonjs",
