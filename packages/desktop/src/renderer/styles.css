@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
-   Harness Desktop - Dark Theme (VSCode-style layout)
+   Harness Desktop - Themed layout (VSCode-style)
    ═══════════════════════════════════════════════════════════ */
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-primary: #0f1117;
   --bg-secondary: #161822;
   --bg-tertiary: #1c1f2e;
@@ -27,6 +28,26 @@
   --title-bar-h: 36px;
   --activity-bar-w: 48px;
   --status-bar-h: 24px;
+}
+
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-tertiary: #ebedf0;
+  --bg-card: #ffffff;
+  --bg-input: #f0f1f4;
+  --bg-hover: #e4e6eb;
+  --border: #d1d5db;
+  --border-active: #4f5fd9;
+  --text-primary: #1a1d2e;
+  --text-secondary: #5a5f78;
+  --text-muted: #9098ac;
+  --accent: #4f5fd9;
+  --accent-hover: #3d4ec7;
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
 }
 
 * {
@@ -371,9 +392,16 @@ html, body {
   background: rgba(255,68,68,0.15);
 }
 
-/* ─── Chat Panel ─────────────────────────────────────────── */
+/* ─── Panels with split layout need no padding ───────────── */
 
-#panel-chat {
+/* All split-layout panels need zero outer padding */
+#panel-chat,
+#panel-tools,
+#panel-skills,
+#panel-plugins,
+#panel-events,
+#panel-sessions,
+#panel-soul {
   padding: 0;
 }
 
@@ -978,6 +1006,149 @@ select.settings-input {
   color: var(--error);
 }
 
+/* ─── Narrow Sidebar (for events filters) ────────────────── */
+
+.panel-sidebar-narrow {
+  width: 180px;
+  min-width: 150px;
+}
+
+/* ─── Event Filter Checkboxes ────────────────────────────── */
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.filter-checkbox:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.filter-checkbox input[type="checkbox"] {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.filter-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.filter-swatch-tool { background: var(--info); }
+.filter-swatch-llm { background: #ba68c8; }
+.filter-swatch-agent { background: var(--success); }
+.filter-swatch-state { background: var(--warning); }
+.filter-swatch-feedback { background: #ff8a65; }
+.filter-swatch-error { background: var(--error); }
+.filter-swatch-other { background: var(--text-muted); }
+
+/* ─── Detail Split (top definition + bottom log) ─────────── */
+
+.detail-split {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-section-top {
+  flex: 1;
+  min-height: 0;
+}
+
+.detail-section-bottom {
+  flex: 1;
+  min-height: 0;
+}
+
+.detail-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-section-header h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-section-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.detail-divider {
+  height: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ─── Theme Switcher ─────────────────────────────────────── */
+
+.theme-switcher {
+  display: flex;
+  gap: 6px;
+}
+
+.theme-btn {
+  min-width: 72px;
+  text-align: center;
+}
+
+.theme-btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ─── Light theme adjustments ────────────────────────────── */
+
+[data-theme="light"] .chat-msg-user {
+  color: #fff;
+}
+
+[data-theme="light"] .badge-running { background: rgba(79,95,217,0.15); }
+[data-theme="light"] .badge-done { background: rgba(22,163,74,0.15); }
+[data-theme="light"] .badge-error { background: rgba(220,38,38,0.15); }
+[data-theme="light"] .badge-paused { background: rgba(217,119,6,0.15); }
+
+[data-theme="light"] .card-tag-active { background: rgba(22,163,74,0.15); }
+[data-theme="light"] .card-tag-auto { background: rgba(79,95,217,0.15); }
+
+[data-theme="light"] .log-entry {
+  border-bottom-color: rgba(209,213,219,0.5);
+}
+
+[data-theme="light"] .feedback-bar {
+  background: rgba(79,95,217,0.08);
+}
+
+[data-theme="light"] .chat-msg-system {
+  background: rgba(217,119,6,0.08);
+}
+
 /* ─── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 800px) {
@@ -985,4 +1156,5 @@ select.settings-input {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .chat-msg { max-width: 95%; }
   .panel-sidebar { width: 180px; min-width: 140px; }
+  .panel-sidebar-narrow { width: 140px; min-width: 120px; }
 }
