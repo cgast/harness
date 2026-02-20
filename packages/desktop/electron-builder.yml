@@ -60,6 +60,7 @@ nsis:
 # ── Linux ──────────────────────────────────────────────────────
 linux:
   category: Development
+  maintainer: "Harness Contributors <harness@users.noreply.github.com>"
   target:
     - target: AppImage
       arch:
