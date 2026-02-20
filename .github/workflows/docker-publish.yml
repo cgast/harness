@@ -1,12 +1,11 @@
 name: Docker Publish
 
-# Build and publish the Harness server Docker image to GitHub Container
-# Registry (ghcr.io) on every tagged release and push to main.
+# CI build — validates the Docker image on pushes and PRs.
+# For tagged releases, see release.yml instead.
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
