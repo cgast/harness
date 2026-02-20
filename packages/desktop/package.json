@@ -8,12 +8,12 @@
     "build": "tsc && tsc -p tsconfig.renderer.json && node -e \"const fs=require('fs');const p=require('path');const src='src/renderer';const dst='dist/renderer';for(const f of fs.readdirSync(src)){if(/\\.(html|css)$/.test(f)){fs.cpSync(p.join(src,f),p.join(dst,f))}}\"",
     "clean": "rm -rf dist bundle release",
     "start": "electron ./dist/main/index.js",
-    "dev": "npm run build && electron ./dist/main/index.js",
+    "dev": "pnpm run build && electron ./dist/main/index.js",
     "bundle": "node scripts/bundle.mjs",
-    "dist": "npm run bundle && electron-builder --config electron-builder.yml",
-    "dist:mac": "npm run bundle && electron-builder --config electron-builder.yml --mac",
-    "dist:win": "npm run bundle && electron-builder --config electron-builder.yml --win",
-    "dist:linux": "npm run bundle && electron-builder --config electron-builder.yml --linux",
+    "dist": "pnpm run bundle && electron-builder --config electron-builder.yml",
+    "dist:mac": "pnpm run bundle && electron-builder --config electron-builder.yml --mac",
+    "dist:win": "pnpm run bundle && electron-builder --config electron-builder.yml --win",
+    "dist:linux": "pnpm run bundle && electron-builder --config electron-builder.yml --linux",
     "rebuild-native": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {

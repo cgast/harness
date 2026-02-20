@@ -6,11 +6,14 @@ dist/
 bundle/
 release/
 
-# Electron / Desktop (not needed for server image)
+# Electron / Desktop (not needed for server image, but keep package.json
+# so pnpm can resolve the full workspace during install)
 packages/desktop/
+!packages/desktop/package.json
 
-# CLI (not needed for server image)
+# CLI (not needed for server image, but keep package.json for workspace resolution)
 packages/cli/
+!packages/cli/package.json
 
 # Development files
 .git/
