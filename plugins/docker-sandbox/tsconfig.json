@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@harness/core": ["../../packages/core/dist/index"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src/**/*"]
+}
