@@ -318,6 +318,40 @@
             </div>
           </div>
 
+          <div class="settings-section">
+            <h3>Workspace Permissions</h3>
+            <p class="text-muted" style="font-size:0.85em;margin-bottom:12px;">
+              Restrict which folders the agent can access. Paths are resolved relative to the working directory.
+            </p>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-allowed-paths">Allowed Paths <span class="text-muted">(one per line)</span></label>
+              <textarea id="settings-allowed-paths" class="settings-input" rows="3" placeholder="/home/user/project&#10;/tmp/harness-*" style="font-family:monospace;resize:vertical;"></textarea>
+            </div>
+
+            <div class="settings-field">
+              <label class="settings-label" for="settings-denied-paths">Denied Paths <span class="text-muted">(one per line, takes priority)</span></label>
+              <textarea id="settings-denied-paths" class="settings-input" rows="3" placeholder="/etc&#10;/home/user/.ssh&#10;.env" style="font-family:monospace;resize:vertical;"></textarea>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-field">
+                <label class="settings-label">
+                  <input id="settings-allow-outside-workdir" type="checkbox" style="margin-right:6px;" />
+                  Allow access outside workdir
+                </label>
+                <span class="text-muted" style="font-size:0.8em;display:block;margin-top:2px;">If unchecked, all file operations are confined to the working directory.</span>
+              </div>
+              <div class="settings-field">
+                <label class="settings-label">
+                  <input id="settings-shell-restrict-workdir" type="checkbox" checked style="margin-right:6px;" />
+                  Restrict shell to workdir
+                </label>
+                <span class="text-muted" style="font-size:0.8em;display:block;margin-top:2px;">Prevents shell commands from using a working directory outside the workspace.</span>
+              </div>
+            </div>
+          </div>
+
           <div class="settings-actions">
             <button id="settings-save" class="btn btn-primary">Save Settings</button>
           </div>

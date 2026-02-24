@@ -33,6 +33,7 @@ export type { PersistenceStore, SessionRecord, MemoryRecord, EventLogRecord } fr
 export type { SoulDocument, SoulLayer } from "./soul/loader.js";
 export type { SkillDocument } from "./skills/loader.js";
 export type { AgentStateData } from "./engine/state.js";
+export type { WorkspacePermissions, WorkspaceValidationResult } from "./workspace/types.js";
 
 // Feedback (human-in-the-loop) types
 export type {
@@ -69,6 +70,7 @@ export type {
 } from "./feedback/index.js";
 
 // Re-export classes
+export { WorkspaceGuard } from "./workspace/guard.js";
 export { EventBus } from "./events/bus.js";
 export { AgentState } from "./engine/state.js";
 export { ToolRegistry } from "./tools/registry.js";
@@ -124,6 +126,7 @@ import type { HarnessPlugin } from "./plugins/plugin.js";
 import type { SoulDocument } from "./soul/loader.js";
 import type { SkillDocument } from "./skills/loader.js";
 import { FeedbackManager } from "./feedback/index.js";
+import { WorkspaceGuard } from "./workspace/guard.js";
 
 // ============================================================
 // High-level API
@@ -150,6 +153,14 @@ export interface HarnessConfig {
   harnessHome?: string;
   workdir?: string;
 
+  // Workspace permissions (folder scoping)
+  workspace?: {
+    allowedPaths?: string[];
+    deniedPaths?: string[];
+    allowOutsideWorkdir?: boolean;
+    shellRestrictToWorkdir?: boolean;
+  };
+
   // Plugins
   plugins?: {
     enabled?: string[];
@@ -171,6 +182,7 @@ export interface HarnessAgent {
   tools: ToolRegistry;
   store: PersistenceStore;
   feedback: FeedbackManager;
+  workspace: WorkspaceGuard;
 }
 
 /**
@@ -244,6 +256,9 @@ export async function createAgent(
     store = new MemoryStore();
   }
   store.initialize();
+
+  // Workspace guard (folder-scoped permissions)
+  const workspaceGuard = new WorkspaceGuard(workdir, config.workspace);
 
   // Tool registry
   const toolRegistry = new ToolRegistry(bus);
@@ -341,6 +356,30 @@ export async function createAgent(
     });
   });
 
+  // Workspace permission enforcement via tool:request hook
+  bus.on("tool:request", async (data) => {
+    const FILE_TOOLS = ["file_read", "file_write", "file_list"];
+
+    if (FILE_TOOLS.includes(data.name)) {
+      const targetPath = (data.args.path as string) || ".";
+      const result = workspaceGuard.validatePath(targetPath);
+      if (!result.allowed) {
+        console.warn(`[workspace] Blocked ${data.name}: ${result.reason}`);
+        return { abort: true };
+      }
+    }
+
+    if (data.name === "shell" && data.args.workdir) {
+      const result = workspaceGuard.validateShellWorkdir(data.args.workdir as string);
+      if (!result.allowed) {
+        console.warn(`[workspace] Blocked shell workdir: ${result.reason}`);
+        return { abort: true };
+      }
+    }
+
+    return data;
+  }, 1); // Priority 1: run before all other hooks
+
   // Feedback manager (human-in-the-loop)
   const feedbackManager = new FeedbackManager(bus, state, config.feedback);
 
@@ -355,6 +394,7 @@ export async function createAgent(
     tools: toolRegistry,
     store,
     feedback: feedbackManager,
+    workspace: workspaceGuard,
 
     async run(task: string): Promise<LoopResult> {
       const providerName = state.get("config").provider;

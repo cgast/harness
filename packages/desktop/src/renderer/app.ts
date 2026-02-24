@@ -980,6 +980,12 @@ const settingsTemperature = $("#settings-temperature") as HTMLInputElement;
 const settingsMaxIterations = $("#settings-max-iterations") as HTMLInputElement;
 const settingsMaxTokens = $("#settings-max-tokens") as HTMLInputElement;
 
+// Workspace permissions
+const settingsAllowedPaths = $("#settings-allowed-paths") as HTMLTextAreaElement;
+const settingsDeniedPaths = $("#settings-denied-paths") as HTMLTextAreaElement;
+const settingsAllowOutsideWorkdir = $("#settings-allow-outside-workdir") as HTMLInputElement;
+const settingsShellRestrictWorkdir = $("#settings-shell-restrict-workdir") as HTMLInputElement;
+
 async function refreshSettings(): Promise<void> {
   const result = await window.harness.getSettings();
   if (!result.ok || !result.data) return;
@@ -1000,6 +1006,12 @@ async function refreshSettings(): Promise<void> {
   settingsTemperature.value = cfg.defaults?.temperature?.toString() || "";
   settingsMaxIterations.value = cfg.defaults?.maxIterations?.toString() || "";
   settingsMaxTokens.value = cfg.defaults?.maxTokens?.toString() || "";
+
+  // Workspace permissions
+  settingsAllowedPaths.value = (cfg.workspace?.allowedPaths || []).join("\n");
+  settingsDeniedPaths.value = (cfg.workspace?.deniedPaths || []).join("\n");
+  settingsAllowOutsideWorkdir.checked = cfg.workspace?.allowOutsideWorkdir ?? false;
+  settingsShellRestrictWorkdir.checked = cfg.workspace?.shellRestrictToWorkdir ?? true;
 }
 
 settingsSaveBtn.addEventListener("click", async () => {
@@ -1027,6 +1039,12 @@ settingsSaveBtn.addEventListener("click", async () => {
       temperature: settingsTemperature.value ? parseFloat(settingsTemperature.value) : undefined,
       maxIterations: settingsMaxIterations.value ? parseInt(settingsMaxIterations.value, 10) : undefined,
       maxTokens: settingsMaxTokens.value ? parseInt(settingsMaxTokens.value, 10) : undefined,
+    },
+    workspace: {
+      allowedPaths: settingsAllowedPaths.value.split("\n").map((s: string) => s.trim()).filter(Boolean),
+      deniedPaths: settingsDeniedPaths.value.split("\n").map((s: string) => s.trim()).filter(Boolean),
+      allowOutsideWorkdir: settingsAllowOutsideWorkdir.checked,
+      shellRestrictToWorkdir: settingsShellRestrictWorkdir.checked,
     },
   };
 
