@@ -1123,6 +1123,67 @@ select.settings-input {
   background: rgba(217,119,6,0.08);
 }
 
+/* ─── Deliverables Panel ─────────────────────────────────── */
+
+.deliverables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.deliverable-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: default;
+  transition: border-color 0.15s;
+}
+
+.deliverable-card:hover {
+  border-color: var(--border-active);
+}
+
+.deliverable-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  letter-spacing: 0.3px;
+}
+
+.deliverable-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.deliverable-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deliverable-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 /* ─── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 800px) {

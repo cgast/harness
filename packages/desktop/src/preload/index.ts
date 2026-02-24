@@ -83,6 +83,12 @@ const harnessApi = {
   getPlugins: (): Promise<IpcResult> =>
     ipcRenderer.invoke("harness:plugins-list"),
 
+  // ─── Deliverables ───────────────────────────────────────
+
+  /** List files in the .harness-out/ deliverables directory. */
+  getDeliverables: (): Promise<IpcResult> =>
+    ipcRenderer.invoke("harness:deliverables-list"),
+
   // ─── Sessions ────────────────────────────────────────────
 
   /** List historical sessions. */

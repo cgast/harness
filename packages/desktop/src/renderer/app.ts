@@ -63,6 +63,9 @@ const skillDetail = $("#skill-detail");
 const pluginsList = $("#plugins-list");
 const pluginDetail = $("#plugin-detail");
 
+// Deliverables
+const deliverablesList = $("#deliverables-list");
+
 // Telemetry
 const telemetryStats = $("#telemetry-stats");
 const telemetryChart = $("#telemetry-chart");
@@ -111,6 +114,7 @@ function refreshPanel(panelId: string): void {
     case "telemetry": refreshTelemetry(); break;
     case "settings": refreshSettings(); break;
     case "soul": refreshSoulFiles(); break;
+    case "deliverables": refreshDeliverables(); break;
   }
 }
 
@@ -399,6 +403,62 @@ function showPluginDetail(plugin: any): void {
 }
 
 $("#plugins-refresh")?.addEventListener("click", refreshPlugins);
+
+// ═══════════════════════════════════════════════════════════
+// Deliverables Panel (.harness-out/)
+// ═══════════════════════════════════════════════════════════
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileTypeIcon(type: string): string {
+  switch (type) {
+    case "pdf": return "PDF";
+    case "png": case "jpg": case "jpeg": case "gif": case "svg": return "IMG";
+    case "pptx": case "ppt": return "PPT";
+    case "xlsx": case "xls": case "csv": return "XLS";
+    case "docx": case "doc": return "DOC";
+    case "py": return "PY";
+    case "js": case "ts": return "JS";
+    case "json": return "{ }";
+    case "txt": case "md": return "TXT";
+    default: return "FILE";
+  }
+}
+
+async function refreshDeliverables(): Promise<void> {
+  const result = await window.harness.getDeliverables();
+  if (!result.ok || !result.data) return;
+
+  const files: Array<{ name: string; size: number; type: string; path: string }> = result.data;
+
+  if (files.length === 0) {
+    deliverablesList.innerHTML =
+      '<div class="empty-state"><div class="empty-state-icon">D</div>No deliverables yet. Run a task with the sandbox plugin to generate output files.</div>';
+    return;
+  }
+
+  deliverablesList.innerHTML = "";
+
+  for (const file of files) {
+    const card = document.createElement("div");
+    card.className = "deliverable-card";
+    card.innerHTML = `
+      <div class="deliverable-icon">${fileTypeIcon(file.type)}</div>
+      <div class="deliverable-info">
+        <div class="deliverable-name">${esc(file.name)}</div>
+        <div class="deliverable-meta">${esc(file.type.toUpperCase())} &middot; ${formatFileSize(file.size)}</div>
+      </div>
+    `;
+    card.title = file.path;
+    deliverablesList.appendChild(card);
+  }
+}
+
+$("#deliverables-refresh")?.addEventListener("click", refreshDeliverables);
 
 // ═══════════════════════════════════════════════════════════
 // Telemetry Panel
@@ -908,6 +968,8 @@ window.harness.onEvent(({ event, data }) => {
       );
       // Also show in chat
       appendChatMessage("tool", d?.result?.output || "(no output)", d?.name);
+      // Auto-refresh deliverables after tool execution (may have produced output)
+      refreshDeliverables();
       break;
 
     case "tool:error":

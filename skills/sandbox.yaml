@@ -1,0 +1,22 @@
+id: sandbox
+name: "Sandbox Environment"
+description: "Docker-isolated code execution with Python, Node.js, and LibreOffice"
+version: 1
+
+activation:
+  auto: true  # activates when sandbox plugin is enabled
+
+prompt_injection: |
+  Your commands run inside an isolated Docker container with:
+  - Python 3.12 (with pandas, openpyxl, python-pptx, Pillow, matplotlib, requests)
+  - Node.js 20 (with npm available)
+  - LibreOffice headless (convert documents with: libreoffice --headless --convert-to pdf document.docx)
+  - curl, jq, git
+
+  Your working directory is /workspace (the user's project folder).
+
+  Place final deliverables (generated files the user should receive) in /workspace/.harness-out/
+  Use /tmp for intermediate/scratch files.
+
+  Network access is disabled by default. The http_fetch tool handles external requests.
+  You cannot install system packages (no sudo). You can pip install or npm install as needed.
