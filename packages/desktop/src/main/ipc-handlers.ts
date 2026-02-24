@@ -159,6 +159,16 @@ export function registerIpcHandlers(
     }
   });
 
+  // ─── Deliverables (.harness-out/) ────────────────────────
+
+  ipcMain.handle("harness:deliverables-list", async () => {
+    try {
+      return { ok: true, data: manager.getDeliverables() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
   // ─── Messages / Files ────────────────────────────────────
 
   ipcMain.handle("harness:messages", async () => {

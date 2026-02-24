@@ -617,6 +617,34 @@ export class AgentManager {
     return YAML.stringify(doc);
   }
 
+  // ─── Deliverables (.harness-out/) ──────────────────────────
+
+  getDeliverables(): Array<{ name: string; size: number; type: string; path: string }> {
+    const workdir = this.config.workdir || process.cwd();
+    const outDir = path.join(workdir, ".harness-out");
+
+    if (!fs.existsSync(outDir)) return [];
+
+    try {
+      const entries = fs.readdirSync(outDir, { withFileTypes: true });
+      return entries
+        .filter((e) => e.isFile())
+        .map((e) => {
+          const filePath = path.join(outDir, e.name);
+          const stat = fs.statSync(filePath);
+          const ext = path.extname(e.name).toLowerCase().replace(".", "") || "file";
+          return {
+            name: e.name,
+            size: stat.size,
+            type: ext,
+            path: filePath,
+          };
+        });
+    } catch {
+      return [];
+    }
+  }
+
   // ─── Lifecycle ─────────────────────────────────────────────
 
   async shutdown(): Promise<void> {

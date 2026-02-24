@@ -50,6 +50,9 @@ interface HarnessDesktopApi {
   // Plugins
   getPlugins(): Promise<IpcResult<unknown[]>>;
 
+  // Deliverables
+  getDeliverables(): Promise<IpcResult<Array<{ name: string; size: number; type: string; path: string }>>>;
+
   // Sessions
   getSessions(limit?: number): Promise<IpcResult<unknown[]>>;
   getSession(id: string): Promise<IpcResult>;

@@ -164,6 +164,8 @@ export interface HarnessConfig {
   // Plugins
   plugins?: {
     enabled?: string[];
+    /** Per-plugin configuration, keyed by plugin directory name or id. */
+    [pluginName: string]: unknown;
   };
 
   // Human-in-the-loop feedback
@@ -327,13 +329,21 @@ export async function createAgent(
   if (config.plugins?.enabled) {
     for (const pluginPath of config.plugins.enabled) {
       try {
+        // Pass per-plugin config if available (keyed by plugin directory name)
+        const pluginSpecificConfig =
+          (config.plugins as Record<string, unknown>)?.[pluginPath] ?? {};
+        const pluginConfigData =
+          typeof pluginSpecificConfig === "object" && pluginSpecificConfig !== null
+            ? (pluginSpecificConfig as Record<string, unknown>)
+            : {};
+
         await pluginLoader.loadPlugin(
           pluginPath,
           {
             state,
             store,
             bus,
-            config: createPluginConfig(),
+            config: createPluginConfig(pluginConfigData),
             log: createLogger(pluginPath),
           },
           toolRegistry,
