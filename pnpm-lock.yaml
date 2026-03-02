@@ -54,6 +54,9 @@ importers:
       '@harness/core':
         specifier: workspace:*
         version: link:../core
+      '@harness/plugin-heartbeat':
+        specifier: workspace:*
+        version: link:../../plugins/heartbeat
       yaml:
         specifier: ^2.8.2
         version: 2.8.2
@@ -98,6 +101,19 @@ importers:
       '@types/ws':
         specifier: ^8.5.13
         version: 8.18.1
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  plugins/heartbeat:
+    dependencies:
+      '@harness/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.11
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

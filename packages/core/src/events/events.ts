@@ -33,7 +33,10 @@ export type EventName =
   | "feedback:request"
   | "feedback:response"
   | "feedback:timeout"
-  | "feedback:cancel";
+  | "feedback:cancel"
+  | "heartbeat:before"
+  | "heartbeat:after"
+  | "heartbeat:skip";
 
 // Event payload map: maps event names to their data types
 export interface EventPayloads {
@@ -145,6 +148,25 @@ export interface EventPayloads {
     requestId: string;
     reason: string;
   };
+
+  // Heartbeat events
+  "heartbeat:before": {
+    mission: string;
+    soulId: string | null;
+    maxIterations: number;
+    timestamp: string;
+  };
+  "heartbeat:after": {
+    summary: string;
+    tokenUsage: { input: number; output: number };
+    iterations: number;
+    tickCount: number;
+    timestamp: string;
+  };
+  "heartbeat:skip": {
+    reason: string;
+    timestamp: string;
+  };
 }
 
 // Modifiable events - hooks can modify data or abort
@@ -158,4 +180,5 @@ export const MODIFIABLE_EVENTS: Set<EventName> = new Set([
   "tool:result",
   "user:input",
   "feedback:request",
+  "heartbeat:before",
 ]);

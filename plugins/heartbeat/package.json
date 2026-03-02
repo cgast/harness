@@ -1,0 +1,20 @@
+{
+  "name": "@harness/plugin-heartbeat",
+  "version": "0.1.0",
+  "description": "Periodically triggers agent sessions with a configurable mission prompt",
+  "main": "./dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@harness/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  },
+  "license": "MIT"
+}

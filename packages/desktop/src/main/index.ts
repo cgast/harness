@@ -43,6 +43,60 @@ async function bootstrap() {
   const agentManager = new AgentManager();
   await agentManager.initialize();
 
+  // Load and wire heartbeat plugin
+  try {
+    const heartbeat = require("@harness/plugin-heartbeat");
+    const heartbeatPlugin = heartbeat.default?.default || heartbeat.default || heartbeat;
+    const {
+      getHeartbeatStatus,
+      updateHeartbeatConfig,
+      triggerHeartbeatNow,
+      getHeartbeatHistory,
+    } = heartbeat;
+
+    // Provide runTask and isRunning callbacks via plugin config
+    const { PluginLoader, createPluginConfig, createLogger } = require("@harness/core");
+    const pluginConfig = createPluginConfig({
+      runTask: (opts: any) => agentManager.runTask(opts),
+      isRunning: () => agentManager.getRunning(),
+    });
+    const pluginCtx = {
+      state: (agentManager as any).agent.state,
+      store: (agentManager as any).agent.store,
+      bus: (agentManager as any).agent.bus,
+      config: pluginConfig,
+      log: createLogger("harness-heartbeat"),
+    };
+
+    await heartbeatPlugin.activate(pluginCtx);
+
+    // Register heartbeat tools with the agent
+    if (heartbeatPlugin.tools) {
+      for (const tool of heartbeatPlugin.tools) {
+        (agentManager as any).agent.tools.register(tool);
+      }
+    }
+
+    // Register heartbeat hooks with the event bus
+    if (heartbeatPlugin.hooks) {
+      for (const hook of heartbeatPlugin.hooks) {
+        (agentManager as any).agent.bus.on(hook.event, hook.handler, hook.priority);
+      }
+    }
+
+    // Wire control functions into AgentManager
+    agentManager.initHeartbeat({
+      getStatus: getHeartbeatStatus,
+      updateConfig: updateHeartbeatConfig,
+      trigger: triggerHeartbeatNow,
+      getHistory: getHeartbeatHistory,
+    });
+
+    console.log("[harness-desktop] Heartbeat plugin loaded");
+  } catch (err) {
+    console.warn("[harness-desktop] Heartbeat plugin not available:", (err as Error).message);
+  }
+
   // Create the main window
   const mainWindow = createMainWindow();
 
