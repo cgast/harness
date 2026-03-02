@@ -617,6 +617,47 @@ export class AgentManager {
     return YAML.stringify(doc);
   }
 
+  // ─── Heartbeat ───────────────────────────────────────────────
+
+  private heartbeatControls: {
+    getStatus: () => any;
+    updateConfig: (updates: any) => void;
+    trigger: () => Promise<void>;
+    getHistory: () => any[];
+  } | null = null;
+
+  /**
+   * Wire up heartbeat plugin controls. Called after plugins are loaded.
+   */
+  initHeartbeat(controls: {
+    getStatus: () => any;
+    updateConfig: (updates: any) => void;
+    trigger: () => Promise<void>;
+    getHistory: () => any[];
+  }): void {
+    this.heartbeatControls = controls;
+  }
+
+  getHeartbeatStatus(): any {
+    if (!this.heartbeatControls) throw new Error("Heartbeat plugin not loaded");
+    return this.heartbeatControls.getStatus();
+  }
+
+  updateHeartbeatConfig(updates: any): void {
+    if (!this.heartbeatControls) throw new Error("Heartbeat plugin not loaded");
+    this.heartbeatControls.updateConfig(updates);
+  }
+
+  async triggerHeartbeat(): Promise<void> {
+    if (!this.heartbeatControls) throw new Error("Heartbeat plugin not loaded");
+    await this.heartbeatControls.trigger();
+  }
+
+  getHeartbeatHistory(): any[] {
+    if (!this.heartbeatControls) throw new Error("Heartbeat plugin not loaded");
+    return this.heartbeatControls.getHistory();
+  }
+
   // ─── Deliverables (.harness-out/) ──────────────────────────
 
   getDeliverables(): Array<{ name: string; size: number; type: string; path: string }> {

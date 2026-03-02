@@ -219,4 +219,40 @@ export function registerIpcHandlers(
       return { ok: false, error: err.message };
     }
   });
+
+  // ─── Heartbeat ──────────────────────────────────────────
+
+  ipcMain.handle("harness:heartbeat-status", async () => {
+    try {
+      return { ok: true, data: manager.getHeartbeatStatus() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:heartbeat-config", async (_event: IpcMainInvokeEvent, updates: any) => {
+    try {
+      manager.updateHeartbeatConfig(updates);
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:heartbeat-trigger", async () => {
+    try {
+      await manager.triggerHeartbeat();
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle("harness:heartbeat-history", async () => {
+    try {
+      return { ok: true, data: manager.getHeartbeatHistory() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  });
 }

@@ -77,7 +77,7 @@ export { ToolRegistry } from "./tools/registry.js";
 export { ToolExecutor } from "./tools/executor.js";
 export { MemoryStore } from "./persistence/memory.js";
 export { SqliteStore } from "./persistence/sqlite.js";
-export { PluginLoader } from "./plugins/loader.js";
+export { PluginLoader, createPluginConfig, createLogger } from "./plugins/loader.js";
 export { OpenAIProvider } from "./providers/openai.js";
 export { AnthropicProvider } from "./providers/anthropic.js";
 export { createOllamaProvider } from "./providers/ollama.js";

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@harness/core": "workspace:*",
+    "@harness/plugin-heartbeat": "workspace:*",
     "yaml": "^2.8.2"
   },
   "devDependencies": {
