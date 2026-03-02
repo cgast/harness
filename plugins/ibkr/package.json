@@ -1,0 +1,30 @@
+{
+  "name": "@harness/plugin-ibkr",
+  "version": "0.1.0",
+  "description": "Interactive Brokers (IBKR) Client Portal API integration for portfolio and market analysis",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "harness-plugin",
+    "interactive-brokers",
+    "ibkr",
+    "trading",
+    "portfolio",
+    "market-data",
+    "financial-analysis"
+  ],
+  "dependencies": {
+    "@harness/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  },
+  "license": "MIT"
+}
