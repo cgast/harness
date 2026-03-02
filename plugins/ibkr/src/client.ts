@@ -1,3 +1,47 @@
+/**
+ * IBKRClient — HTTP client for the IBKR Client Portal Gateway REST API
+ *
+ * A lightweight, zero-dependency wrapper around the IBKR CP Gateway endpoints.
+ * Uses Node's built-in http/https modules — no fetch polyfills or external
+ * HTTP libraries required.
+ *
+ * Endpoint coverage:
+ *
+ *   Session    POST /v1/api/iserver/auth/status
+ *              POST /v1/api/tickle
+ *              POST /v1/api/iserver/reauthenticate
+ *              GET  /v1/api/sso/validate
+ *
+ *   Accounts   GET  /v1/api/portfolio/accounts
+ *              GET  /v1/api/portfolio/subaccounts
+ *              GET  /v1/api/iserver/accounts
+ *
+ *   Portfolio  GET  /v1/api/portfolio/{accountId}/positions/{pageId}
+ *              GET  /v1/api/portfolio/{accountId}/summary
+ *              GET  /v1/api/portfolio/{accountId}/ledger
+ *              GET  /v1/api/portfolio/{accountId}/allocation
+ *              GET  /v1/api/portfolio/positions/{conid}
+ *
+ *   P&L        GET  /v1/api/iserver/account/pnl/partitioned
+ *
+ *   Market     GET  /v1/api/iserver/marketdata/snapshot
+ *              GET  /v1/api/iserver/marketdata/history
+ *              GET  /v1/api/iserver/scanner/params
+ *              POST /v1/api/iserver/scanner/run
+ *
+ *   Contracts  POST /v1/api/iserver/secdef/search
+ *              GET  /v1/api/iserver/contract/{conid}/info
+ *              GET  /v1/api/iserver/contract/{conid}/info-and-rules
+ *
+ *   Orders     GET  /v1/api/iserver/account/trades
+ *              GET  /v1/api/iserver/account/orders
+ *
+ * All methods throw IBKRApiError on HTTP 4xx/5xx responses.
+ *
+ * @see index.ts  — plugin entry point that wires these methods into Harness tools
+ * @see README.md — setup guide, configuration, and rate-limit reference
+ */
+
 import * as https from "node:https";
 import * as http from "node:http";
 

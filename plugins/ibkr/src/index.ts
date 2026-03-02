@@ -1,3 +1,36 @@
+/**
+ * Harness IBKR Plugin
+ *
+ * Connects to the Interactive Brokers Client Portal Gateway REST API and
+ * exposes 17 read-only tools to the LLM agent, grouped into four areas:
+ *
+ *   - Session   — auth status, keep-alive, re-authentication
+ *   - Accounts  — list accounts, summary, ledger, P&L
+ *   - Portfolio  — positions, allocation, trades, orders
+ *   - Market data — contract search, snapshots, history, scanners
+ *
+ * The plugin also injects a prompt:assemble hook that teaches the LLM how
+ * to sequence the tools (e.g. call ibkr_accounts before ibkr_positions).
+ *
+ * Prerequisites:
+ *   1. An IBKR Pro account
+ *   2. The Client Portal Gateway running locally (default https://localhost:5000)
+ *   3. An authenticated gateway session (browser login)
+ *
+ * Configuration (in ~/.harness/config.yaml):
+ *
+ *   plugins:
+ *     ibkr:
+ *       baseUrl: "https://localhost:5000"
+ *       rejectUnauthorized: false
+ *       timeout: 15000
+ *       autoTickle: true
+ *       tickleIntervalMs: 240000
+ *
+ * @see client.ts  — IBKRClient HTTP wrapper with typed responses
+ * @see README.md  — full setup guide, tool reference, and rate limits
+ */
+
 import type {
   HarnessPlugin,
   PluginContext,
